@@ -344,7 +344,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
       <footer className="safe-bottom border-t border-line bg-[linear-gradient(180deg,#11161e_0%,#0b0e13_100%)]">
         <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60">
           <span>
-            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts · <span className="text-white/40">tap to select, hold to drag</span>
+            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
           </span>
           {selected.size > 0 ? (
             <button onClick={clearSelection} className="text-gold underline">clear {selected.size}</button>
