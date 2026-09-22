@@ -14,12 +14,12 @@ interface Props {
 
 const Field = ({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) => (
   <label className="flex flex-col gap-1">
-    <span className="text-sm text-white/70">{label}</span>
+    <span className="label">{label}</span>
     {children}
     {hint && <span className="text-xs text-white/50">{hint}</span>}
   </label>
 );
-const input = 'rounded-lg bg-white px-3 py-2 text-black';
+const input = 'input !py-2';
 const num = (v: number, set: (n: number) => void, min?: number, max?: number) => (
   <input type="number" inputMode="numeric" className={input} value={v} min={min} max={max} onChange={(e) => set(Number(e.target.value))} />
 );
@@ -117,7 +117,7 @@ export function RuleSetEditor({ value: rs, onChange, saved = [], onSave, onDelet
           {RANKS.map((r) => (
             <button
               key={r}
-              className={`rounded px-2 py-1 text-sm ${rs.wilds.ranks.includes(r) ? 'bg-amber-400 text-black' : 'bg-white/15'}`}
+              className={`rounded px-2 py-1 text-sm ${rs.wilds.ranks.includes(r) ? 'bg-gold text-ink' : 'bg-ink-4'}`}
               onClick={() => {
                 const ranks: Rank[] = rs.wilds.ranks.includes(r) ? rs.wilds.ranks.filter((x) => x !== r) : [...rs.wilds.ranks, r];
                 set({ wilds: { jokers: true, ranks } });
@@ -169,7 +169,7 @@ export function RuleSetEditor({ value: rs, onChange, saved = [], onSave, onDelet
         </Field>
       </div>
 
-      <details className="rounded-lg bg-white/5 p-3">
+      <details className="panel p-3">
         <summary className="cursor-pointer text-sm font-semibold">Scoring</summary>
         <div className="mt-2 grid grid-cols-2 gap-3">
           <Field label="Face cards (J Q K)">{num(rs.scoring.faceCards, (n) => set({ scoring: { ...rs.scoring, faceCards: n } }), 0)}</Field>
@@ -189,7 +189,7 @@ export function RuleSetEditor({ value: rs, onChange, saved = [], onSave, onDelet
         </div>
         <ol className="flex flex-col gap-2">
           {rs.rounds.map((r, i) => (
-            <li key={r.id} className="rounded-lg bg-black/25 p-2">
+            <li key={r.id} className="rounded-xl border border-line bg-ink-3 p-2">
               <div className="flex items-center gap-2">
                 <span className="w-6 text-sm text-white/60">{i + 1}.</span>
                 <span className="flex-1 text-sm font-medium">{r.name}</span>
@@ -206,12 +206,12 @@ export function RuleSetEditor({ value: rs, onChange, saved = [], onSave, onDelet
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 {r.melds.map((m, mi) => (
                   <span key={mi} className="inline-flex items-center gap-1 rounded bg-white/10 px-1.5 py-1 text-xs">
-                    <select className="rounded bg-white px-1 py-0.5 text-black" value={m.kind} onChange={(e) => updateMeld(i, mi, { kind: e.target.value as 'set' | 'run', size: e.target.value === 'set' ? Math.max(3, m.size) : Math.max(4, m.size) })}>
+                    <select className="rounded bg-ink-4 px-1 py-0.5 text-white" value={m.kind} onChange={(e) => updateMeld(i, mi, { kind: e.target.value as 'set' | 'run', size: e.target.value === 'set' ? Math.max(3, m.size) : Math.max(4, m.size) })}>
                       <option value="set">set</option>
                       <option value="run">run</option>
                     </select>
                     of
-                    <input type="number" className="w-12 rounded bg-white px-1 py-0.5 text-black" value={m.size} min={m.kind === 'set' ? 3 : 4} max={13} onChange={(e) => updateMeld(i, mi, { size: Number(e.target.value) })} />
+                    <input type="number" className="w-12 rounded bg-ink-4 px-1 py-0.5 text-white" value={m.size} min={m.kind === 'set' ? 3 : 4} max={13} onChange={(e) => updateMeld(i, mi, { size: Number(e.target.value) })} />
                     <button className="text-white/60" onClick={() => { const melds = r.melds.filter((_, j) => j !== mi); updateRound(i, { melds, name: contractName(melds) }); }} aria-label="Remove meld">
                       ✕
                     </button>

@@ -5,12 +5,14 @@ import { cardLabel, eligibleBuyers, findContractMelds, findLayOffs, handScore, i
 import type { GameData } from '@/lib/supabase/useGame';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
-import { CardView } from '../components/CardView';
+import { CardStack, CardView } from '../components/CardView';
 import { Countdown } from '../components/Countdown';
+import { Felt, arcPosition } from '../components/Felt';
 import { Hand } from '../components/Hand';
 import { MeldView } from '../components/MeldView';
+import { Seat } from '../components/Seat';
 
-type Mode = { kind: 'idle' } | { kind: 'layoff' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
+type Mode = { kind: 'idle' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
 
 export function TableScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet: rs } = game;
@@ -26,7 +28,6 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const handById = useMemo(() => new Map(hand.map((c) => [c.id, c])), [hand]);
   const reorderTimer = useRef<number>();
 
-  // Drop selections for cards that left the hand.
   useEffect(() => {
     setSelected((s) => new Set([...s].filter((id) => handById.has(id))));
     setGroups((g) => g.map((grp) => grp.filter((id) => handById.has(id))).filter((grp) => grp.length > 0));
@@ -70,7 +71,6 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const iHoldPriority = view.buyWindow && view.buyWindow.order[view.buyWindow.index] === mySeat;
   const iClaimed = view.buyWindow?.claims.includes(mySeat);
 
-  // ---- actions ----
   const stageGroup = () => {
     if (selectedCards.length === 0) return;
     setGroups((g) => [...g, selectedCards.map((c) => c.id)]);
@@ -111,6 +111,17 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
       }
     }, clearSelection);
   };
+  const tapMeld = (meld: Meld) => {
+    if (!canPlay) return;
+    if (mode.kind === 'replace') {
+      send({ type: 'REPLACE_WILD', meldId: mode.meldId, wildCardId: mode.wildCardId, naturalCardId: mode.naturalCardId, playTo: { meldId: meld.id } }, () => {
+        clearSelection();
+        setMode({ kind: 'idle' });
+      });
+      return;
+    }
+    if (me?.hasLaidDown && selectedCards.length > 0) layOffTo(meld);
+  };
   const tapMeldCard = (meld: Meld, cardId: string) => {
     if (!canPlay || !me?.hasLaidDown) return;
     if (mode.kind === 'replace') {
@@ -124,17 +135,6 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     }
     layOffTo(meld);
   };
-  const tapMeld = (meld: Meld) => {
-    if (!canPlay) return;
-    if (mode.kind === 'replace') {
-      send({ type: 'REPLACE_WILD', meldId: mode.meldId, wildCardId: mode.wildCardId, naturalCardId: mode.naturalCardId, playTo: { meldId: meld.id } }, () => {
-        clearSelection();
-        setMode({ kind: 'idle' });
-      });
-      return;
-    }
-    if (me?.hasLaidDown && selectedCards.length > 0) layOffTo(meld);
-  };
   const onReorder = (ids: string[]) => {
     window.clearTimeout(reorderTimer.current);
     const full = [...ids, ...groups.flat().filter((id) => handById.has(id))];
@@ -142,122 +142,122 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   };
 
   const topDiscard = view.discard[view.discard.length - 1];
-  const others = view.players;
+  const others = view.players.filter((p) => p.seat !== mySeat);
+  const current = view.players[view.currentSeat];
+  const bw = view.buyWindow;
+  const priorityName = bw ? view.players[bw.order[bw.index]]?.name : undefined;
+
+  const status = (() => {
+    if (view.phase === 'buy.window' && bw) {
+      if (canBuy) return iHoldPriority ? 'You have first claim on the discard.' : `${priorityName} has priority. Claim to buy if they pass.`;
+      if (myTurn) return `Buy window open. ${priorityName} deciding… draw from stock to end it.`;
+      return `${priorityName} deciding whether to buy…`;
+    }
+    if (view.phase === 'turn.draw') return myTurn ? 'Draw from the stock or take the discard.' : `${current?.name} is drawing…`;
+    if (view.phase === 'turn.play') {
+      if (!myTurn) return `${current?.name} is playing…`;
+      if (mode.kind === 'replace') return 'Tap the meld where the freed wild should go.';
+      return me?.hasLaidDown ? 'Select cards, then tap a meld to lay off.' : 'Build your contract, then discard.';
+    }
+    return '';
+  })();
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header: round + contract */}
-      <header className="flex items-center justify-between bg-black/30 px-3 py-2 text-sm">
+      {/* Top bar */}
+      <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur">
         <div>
-          <div className="text-[11px] uppercase tracking-wide text-white/60">
-            Round {view.roundIndex + 1}/{rs.rounds.length}
-            {contract.noDiscard && <span className="ml-2 rounded bg-red-500/40 px-1 text-[10px]">NO DISCARD</span>}
+          <div className="label">Round {view.roundIndex + 1} of {rs.rounds.length}</div>
+          <div className="font-display text-base font-bold capitalize text-white">
+            {contract.name}
+            {contract.noDiscard && <span className="ml-2 rounded bg-red-500/30 px-1.5 align-middle text-[9px] font-bold uppercase tracking-wider text-red-200">no discard</span>}
           </div>
-          <div className="font-semibold capitalize">{contract.name}</div>
         </div>
         <div className="text-right">
-          <div className="text-[11px] uppercase tracking-wide text-white/60">{myTurn ? 'Your turn' : `${view.players[view.currentSeat]?.name}'s turn`}</div>
-          <Countdown deadline={view.phase === 'buy.window' ? view.buyWindow?.deadline : view.turnDeadline} className="text-lg font-bold" />
+          <div className={`label ${myTurn ? '!text-gold' : ''}`}>{myTurn ? 'Your turn' : `${current?.name}'s turn`}</div>
+          <Countdown deadline={view.phase === 'buy.window' ? bw?.deadline : view.turnDeadline} className="font-display text-xl font-bold" />
         </div>
       </header>
 
-      {/* Players strip */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 py-2">
-        {others.map((p) => (
-          <div
-            key={p.seat}
-            className={`flex shrink-0 flex-col rounded-lg px-2 py-1 text-xs ${p.seat === view.currentSeat ? 'bg-amber-400 text-black' : 'bg-white/10'} ${!p.connected ? 'opacity-50' : ''}`}
-          >
-            <span className="font-semibold">
-              {p.seat === view.dealerSeat && '🂠 '}
-              {p.isBot && '🤖 '}
-              {p.name}
-              {p.seat === mySeat && ' (you)'}
-            </span>
-            <span className="opacity-80">
-              {p.handCount} cards · {p.buysLeft} buy{p.buysLeft === 1 ? '' : 's'}
-              {p.hasLaidDown && ' · ✓ down'}
-            </span>
-          </div>
-        ))}
-      </div>
+      <main className="flex-1 overflow-y-auto">
+        {/* The table */}
+        <div className="px-2 pt-2">
+          <Felt className="h-[330px]">
+            {others.map((p, i) => (
+              <div key={p.seat} className="absolute -translate-x-1/2 -translate-y-1/2" style={arcPosition(i, others.length)}>
+                <Seat player={p} active={p.seat === view.currentSeat} isDealer={p.seat === view.dealerSeat} isMe={false} deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact wentOut={view.wentOutSeat === p.seat} />
+              </div>
+            ))}
 
-      {/* Table: melds + piles */}
-      <main className="flex-1 overflow-y-auto px-3 pb-2">
-        <div className="mb-3 flex items-center gap-4 rounded-xl bg-black/20 p-3">
-          <button
-            className="flex flex-col items-center gap-1 disabled:opacity-60"
-            disabled={!canDraw || busy}
-            onClick={() => send({ type: 'DRAW_STOCK' })}
-          >
-            <CardView card={{ id: 'stock', rank: 'A', suit: 'S', deck: 0 }} ruleSet={rs} faceDown />
-            <span className="text-xs text-white/70">Stock · {view.stockCount}</span>
-          </button>
-          <button
-            className="flex flex-col items-center gap-1 disabled:opacity-60"
-            disabled={!canDraw || !topDiscard || busy}
-            onClick={() => send({ type: 'DRAW_DISCARD' })}
-          >
-            {topDiscard ? <CardView card={topDiscard} ruleSet={rs} /> : <div className="h-20 w-14 rounded-md border border-dashed border-white/30" />}
-            <span className="text-xs text-white/70">Discard · {view.discard.length}</span>
-          </button>
-          <div className="flex-1 text-sm">
-            {view.phase === 'buy.window' && view.buyWindow && (
-              <div className="rounded-lg bg-white/10 p-2">
-                <div className="text-xs uppercase text-white/60">Buy window</div>
-                <div>
-                  {view.players[view.buyWindow.order[view.buyWindow.index]]?.name} has priority <Countdown deadline={view.buyWindow.deadline} />
+            {/* Center: piles */}
+            <div className="absolute left-1/2 top-[51%] flex -translate-x-1/2 -translate-y-1/2 items-end gap-5">
+              <div className="flex flex-col items-center gap-1">
+                <div className={canDraw && !busy ? 'rounded-lg ring-2 ring-gold/70 shadow-glow' : ''}>
+                  <CardStack count={view.stockCount} disabled={!canDraw || busy} onClick={() => send({ type: 'DRAW_STOCK' })} />
                 </div>
-                {canBuy && (
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
-                      {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
-                    </Button>
-                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>
-                      Pass
-                    </Button>
-                  </div>
-                )}
-                {myTurn && <div className="mt-1 text-xs text-white/60">Drawing from stock ends the window.</div>}
+                <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80">Stock · {view.stockCount}</span>
+              </div>
+              <div className="flex flex-col items-center gap-1">
+                <button type="button" disabled={!canDraw || !topDiscard || busy} onClick={() => send({ type: 'DRAW_DISCARD' })} className={`rounded-lg disabled:opacity-90 ${canDraw && topDiscard && !busy ? 'ring-2 ring-gold/70 shadow-glow' : ''}`}>
+                  {topDiscard ? <CardView card={topDiscard} ruleSet={rs} /> : <div className="h-[86px] w-[60px] rounded-lg border border-dashed border-white/30" />}
+                </button>
+                <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80">Discard · {view.discard.length}</span>
+              </div>
+            </div>
+
+            {me && (
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
+                <Seat player={me} active={myTurn} isDealer={me.seat === view.dealerSeat} isMe deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact wentOut={view.wentOutSeat === me.seat} />
               </div>
             )}
-            {view.phase === 'turn.draw' && myTurn && <div className="text-white/80">Draw from the stock or take the discard.</div>}
-            {view.phase === 'turn.play' && myTurn && (
-              <div className="text-white/80">
-                {mode.kind === 'replace' ? 'Tap the meld where the freed wild should go.' : me?.hasLaidDown ? 'Select cards, then tap a meld to lay off.' : 'Build your contract, then discard.'}
+          </Felt>
+        </div>
+
+        {view.phase === 'buy.window' && bw ? (
+          <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 animate-rise">
+            <div>
+              <div className="label !text-gold">Buy window · <Countdown deadline={bw.deadline} /></div>
+              <div className="text-xs text-white/80">{status}</div>
+            </div>
+            {canBuy && (
+              <div className="flex shrink-0 gap-2">
+                <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
+                  {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
+                </Button>
+                <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>Pass</Button>
               </div>
             )}
           </div>
+        ) : (
+          <p className="px-4 pt-2 text-center text-xs text-white/60">{status}</p>
+        )}
+
+        {/* Melds */}
+        <div className="px-3 pt-2">
+          <div className="label mb-1.5">On the table</div>
+          {view.melds.length === 0 ? (
+            <p className="rounded-xl border border-dashed border-white/15 py-3 text-center text-xs text-white/40">No melds yet</p>
+          ) : (
+            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
+              {view.melds.map((m) => (
+                <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={view.players[m.ownerSeat]?.name ?? ''} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
+              ))}
+            </div>
+          )}
         </div>
 
-        {view.melds.length === 0 && <p className="py-4 text-center text-sm text-white/50">No melds on the table yet.</p>}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {view.melds.map((m) => (
-            <MeldView
-              key={m.id}
-              meld={m}
-              ruleSet={rs}
-              ownerName={view.players[m.ownerSeat]?.name ?? ''}
-              highlight={mode.kind === 'replace' && mode.meldId === m.id}
-              onTap={canPlay ? () => tapMeld(m) : undefined}
-              onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined}
-            />
-          ))}
-        </div>
-
-        {/* Staged lay-down groups */}
         {groups.length > 0 && (
-          <div className="mt-3 rounded-xl bg-sky-400/10 p-2">
-            <div className="mb-1 flex items-center justify-between text-xs uppercase text-white/60">
-              <span>Ready to lay down ({groups.length}/{contract.melds.length})</span>
-              <button onClick={() => setGroups([])}>clear</button>
+          <div className="mx-3 mt-2 rounded-xl border border-gold/40 bg-gold/10 p-2 animate-rise">
+            <div className="mb-1 flex items-center justify-between">
+              <span className="label !text-gold">Ready to lay down · {groups.length}/{contract.melds.length}</span>
+              <button className="text-xs text-white/60 underline" onClick={() => setGroups([])}>clear</button>
             </div>
             <div className="flex flex-wrap gap-2">
               {groups.map((g, gi) => (
-                <button key={gi} className="flex rounded bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
-                  {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c) => (
-                    <div key={c.id} className="-ml-3 first:ml-0">
-                      <CardView card={c} ruleSet={rs} small />
+                <button key={gi} className="flex rounded-lg bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
+                  {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c, i) => (
+                    <div key={c.id} className="-ml-4 first:ml-0" style={{ zIndex: i }}>
+                      <CardView card={c} ruleSet={rs} size="sm" />
                     </div>
                   ))}
                 </button>
@@ -266,53 +266,40 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
           </div>
         )}
 
-        <details className="mt-3 text-xs text-white/50">
-          <summary>Log</summary>
-          <ul className="mt-1">
-            {view.log.slice().reverse().map((l, i) => (
-              <li key={i}>{l}</li>
-            ))}
+        <details className="mx-3 my-2 text-xs text-white/40">
+          <summary className="cursor-pointer">Table log</summary>
+          <ul className="mt-1 space-y-0.5">
+            {view.log.slice().reverse().map((l, i) => <li key={i}>{l}</li>)}
           </ul>
         </details>
       </main>
 
-      {/* Hand + action bar */}
-      <footer className="safe-bottom bg-black/40">
-        <div className="flex items-center justify-between px-3 pt-2 text-xs text-white/60">
+      {/* Hand tray */}
+      <footer className="safe-bottom border-t border-line bg-[linear-gradient(180deg,#11161e_0%,#0b0e13_100%)]">
+        <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60">
           <span>
-            Your hand · {hand.length} cards · {handScore(hand, rs)} pts
-            {me && ` · ${me.buysLeft} buys left`}
+            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
           </span>
-          {selected.size > 0 && (
-            <button onClick={clearSelection} className="underline">
-              clear {selected.size}
-            </button>
+          {selected.size > 0 ? (
+            <button onClick={clearSelection} className="text-gold underline">clear {selected.size}</button>
+          ) : (
+            me && <span>{me.buysLeft} buy{me.buysLeft === 1 ? '' : 's'} left</span>
           )}
         </div>
         <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-3">
+        <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-2">
           {canPlay && !me?.hasLaidDown && (
             <>
-              <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>
-                Group ({selected.size})
-              </Button>
-              <Button size="sm" variant="secondary" disabled={busy} onClick={autoArrange}>
-                Auto
-              </Button>
-              <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>
-                Lay down
-              </Button>
+              <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>Group ({selected.size})</Button>
+              <Button size="sm" variant="outline" disabled={busy} onClick={autoArrange}>✨ Auto</Button>
+              <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>Lay down</Button>
             </>
           )}
           {canPlay && me?.hasLaidDown && rs.layOff !== 'never' && (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={autoLayOff}>
-              Auto lay off
-            </Button>
+            <Button size="sm" variant="outline" disabled={busy} onClick={autoLayOff}>✨ Auto lay off</Button>
           )}
           {canPlay && mode.kind === 'replace' && (
-            <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>
-              Cancel replace
-            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>Cancel replace</Button>
           )}
           {canPlay && !contract.noDiscard && (
             <Button size="sm" variant="danger" disabled={selected.size !== 1 || busy} onClick={discard}>
@@ -320,11 +307,9 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
             </Button>
           )}
           {canPlay && contract.noDiscard && (
-            <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>
-              End turn
-            </Button>
+            <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>End turn</Button>
           )}
-          {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-sm text-white/50">Waiting for {view.players[view.currentSeat]?.name}…</span>}
+          {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-xs text-white/40">Waiting for {current?.name}…</span>}
         </div>
       </footer>
     </div>

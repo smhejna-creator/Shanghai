@@ -4,6 +4,7 @@ import type { User } from '@supabase/supabase-js';
 import { useGame } from '@/lib/supabase/useGame';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
+import { Logo } from '../components/Logo';
 import { Scoreboard } from '../components/Scoreboard';
 import { LobbyScreen } from './LobbyScreen';
 import { TableScreen } from './TableScreen';
@@ -38,9 +39,10 @@ export function GameScreen({ user }: { user: User }) {
   if (view.phase === 'lobby') body = <LobbyScreen game={data} gameId={id!} user={user} onError={setToast} />;
   else if (view.phase === 'round.over')
     body = (
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
-        <h1 className="text-2xl font-black text-amber-300">Round {view.roundIndex + 1} over</h1>
-        <p className="text-white/80">
+      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise">
+        <Logo size="sm" />
+        <h1 className="font-display text-3xl font-bold">Round {view.roundIndex + 1} <span className="gold-text">complete</span></h1>
+        <p className="text-white/70">
           {view.wentOutSeat !== undefined ? `${view.players[view.wentOutSeat].name} went out.` : 'No one went out.'} Next: {ruleSet.rounds[view.roundIndex + 1]?.name}
           {ruleSet.rounds[view.roundIndex + 1]?.noDiscard ? ' (no discard)' : ''}.
         </p>
@@ -56,12 +58,14 @@ export function GameScreen({ user }: { user: User }) {
     );
   else if (view.phase === 'game.over')
     body = (
-      <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
-        <h1 className="text-2xl font-black text-amber-300">Game over</h1>
-        <p className="text-lg">
-          🏆 {view.winnerSeats?.map((s) => view.players[s].name).join(' & ')} win{view.winnerSeats && view.winnerSeats.length > 1 ? '' : 's'}!
-        </p>
-        <Scoreboard players={view.players} ruleSet={ruleSet} upToRound={ruleSet.rounds.length - 1} />
+      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise">
+        <Logo size="sm" />
+        <div className="panel flex flex-col items-center gap-1 border-gold/40 p-5 text-center">
+          <div className="text-5xl">🏆</div>
+          <div className="label !text-gold">Winner</div>
+          <div className="font-display text-3xl font-bold">{view.winnerSeats?.map((s) => view.players[s].name).join(' & ')}</div>
+        </div>
+        <Scoreboard players={view.players} ruleSet={ruleSet} upToRound={ruleSet.rounds.length - 1} final />
         <Button size="lg" onClick={() => nav('/')}>
           Back to home
         </Button>
@@ -74,7 +78,7 @@ export function GameScreen({ user }: { user: User }) {
       {body}
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 top-3 z-50 flex justify-center px-4">
-          <div className="rounded-xl bg-black/85 px-4 py-2 text-sm text-white shadow-lg">{toast}</div>
+          <div className="rounded-xl border border-gold/30 bg-ink-2/95 px-4 py-2 text-sm text-white shadow-panel backdrop-blur">{toast}</div>
         </div>
       )}
     </div>

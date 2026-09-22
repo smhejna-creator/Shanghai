@@ -70,7 +70,8 @@ async function run(state, label, checks) {
   await page.waitForTimeout(1500);
   const text = await page.innerText('body');
   for (const c of checks) if (!text.toLowerCase().includes(c.toLowerCase())) errors.push(`[${label}] missing text: ${c}`);
-  await page.screenshot({ path: `${process.argv[3]}/${label}.png`, fullPage: true });
+  await page.screenshot({ path: `${process.argv[3]}/${label}.png` });
+  await page.screenshot({ path: `${process.argv[3]}/${label}-full.png`, fullPage: true });
   return { page, ctx, text };
 }
 const l = await run(lobby, 'lobby', ['Lobby', 'ABC123', 'Bob', 'Cat', 'Start game']);
@@ -96,6 +97,16 @@ const h = await (async () => {
   await page.screenshot({ path: `${process.argv[3]}/setup.png`, fullPage: true });
   await ctx.close();
 })();
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(`[auth] pageerror ${e.message}`));
+  await page.route('http://fake.supabase.local/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto('http://localhost:4173/');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${process.argv[3]}/auth.png` });
+  await ctx.close();
+}
 await browser.close();
 server.close();
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'SMOKE OK');

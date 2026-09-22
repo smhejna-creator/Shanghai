@@ -16,8 +16,8 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
   const [drag, setDrag] = useState<{ id: string; x: number; over: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const start = useRef<{ id: string; x: number; y: number; moved: boolean; timer?: number; dragging: boolean } | null>(null);
+  const dragging = useRef(false);
 
-  // Merge server hand into local order (keeps the player's arrangement, appends new cards).
   useEffect(() => {
     const ids = new Set(cards.map((c) => c.id));
     setOrder((prev) => {
@@ -28,7 +28,6 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
     });
   }, [cards]);
 
-  const dragging = useRef(false);
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -68,10 +67,8 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
   const onPointerMove = (e: React.PointerEvent) => {
     const s = start.current;
     if (!s) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
     if (!s.dragging) {
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
         s.moved = true;
         window.clearTimeout(s.timer);
       }
@@ -108,29 +105,31 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
     setDrag(null);
   };
 
+  const n = ordered.length;
   return (
     <div
       ref={scroller}
-      className="no-scrollbar flex touch-pan-x items-end gap-0 overflow-x-auto px-4 pb-2 pt-5"
+      className="no-scrollbar flex touch-pan-x items-end overflow-x-auto px-5 pb-4 pt-6"
       style={{ touchAction: drag ? 'none' : 'pan-x' }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
     >
-      {ordered.map((c, i) => (
-        <div
-          key={c.id}
-          data-card
-          onPointerDown={onPointerDown(c.id)}
-          className={`-ml-5 first:ml-0 transition-all ${drag?.id === c.id ? 'z-20 scale-110 opacity-70' : ''} ${
-            drag && drag.over === i && drag.id !== c.id ? 'ml-2' : ''
-          }`}
-          style={{ zIndex: drag?.id === c.id ? 30 : i }}
-        >
-          <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} />
-        </div>
-      ))}
-      {ordered.length === 0 && <div className="py-6 text-sm text-white/60">No cards in hand</div>}
+      {ordered.map((c, i) => {
+        const tilt = n > 1 ? ((i - (n - 1) / 2) / (n - 1)) * 10 : 0;
+        return (
+          <div
+            key={c.id}
+            data-card
+            onPointerDown={onPointerDown(c.id)}
+            className={`-ml-6 first:ml-0 transition-all ${drag?.id === c.id ? 'z-20 scale-110 opacity-80' : ''} ${drag && drag.over === i && drag.id !== c.id ? 'ml-1' : ''}`}
+            style={{ zIndex: drag?.id === c.id ? 30 : i, transform: selected.has(c.id) ? undefined : `rotate(${tilt}deg) translateY(${Math.abs(tilt) * 0.3}px)` }}
+          >
+            <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} />
+          </div>
+        );
+      })}
+      {n === 0 && <div className="w-full py-6 text-center text-sm text-white/50">No cards in hand</div>}
     </div>
   );
 }
