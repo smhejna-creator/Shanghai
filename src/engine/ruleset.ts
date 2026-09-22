@@ -1,4 +1,4 @@
-// RuleSet: every configurable rule of Shang Hi. No React / Supabase imports.
+// RuleSet: every configurable rule of Shanghai. No React / Supabase imports.
 
 export type Rank = 'A' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'J' | 'Q' | 'K';
 export const RANKS: Rank[] = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];

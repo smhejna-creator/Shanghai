@@ -30,8 +30,8 @@ export function AuthScreen() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-sm flex-col justify-center px-6 py-10">
-      <h1 className="mb-1 text-4xl font-black tracking-tight text-amber-300">Shang Hi</h1>
-      <p className="mb-8 text-white/70">Shanghai rummy with friends, on your phone.</p>
+      <h1 className="mb-1 text-4xl font-black tracking-tight text-amber-300">Shanghai</h1>
+      <p className="mb-8 text-white/70">Contract rummy with friends, on your phone.</p>
       {!supabaseConfigured && (
         <div className="mb-4 rounded-lg bg-red-500/20 p-3 text-sm">
           Supabase is not configured. Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code>.
