@@ -6,3 +6,4 @@ export * from './state.ts';
 export * from './reducer.ts';
 export * from './view.ts';
 export * from './solver.ts';
+export * from './bot.ts';

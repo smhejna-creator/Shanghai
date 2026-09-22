@@ -8,7 +8,7 @@ export class ApiError extends Error {
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-export type ActionInput = DistributiveOmit<Extract<Action, { userId: string }>, 'userId' | 'now'> | { type: 'TICK' };
+export type ActionInput = DistributiveOmit<Extract<Action, { userId: string }>, 'userId' | 'now' | 'botId'> | { type: 'REMOVE_BOT'; botId: string } | { type: 'TICK' };
 
 async function call<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('game-action', { body });

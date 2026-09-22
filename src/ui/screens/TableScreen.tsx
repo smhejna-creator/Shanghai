@@ -170,6 +170,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
           >
             <span className="font-semibold">
               {p.seat === view.dealerSeat && '🂠 '}
+              {p.isBot && '🤖 '}
               {p.name}
               {p.seat === mySeat && ' (you)'}
             </span>
