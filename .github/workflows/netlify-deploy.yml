@@ -1,0 +1,42 @@
+# Manual deploy to Netlify from a GitHub runner.
+# Trigger with "Run workflow" and paste the proxy path that the Netlify MCP
+# deploy-site operation prints (or set NETLIFY_AUTH_TOKEN + NETLIFY_SITE_ID
+# secrets and use the token path instead).
+name: Deploy to Netlify
+
+on:
+  workflow_dispatch:
+    inputs:
+      site_id:
+        description: Netlify site id
+        required: true
+        default: eedfa337-4b16-4cb4-99db-d97a88a572e5
+      proxy_path:
+        description: Proxy path from the Netlify MCP deploy-site command (leave blank to use NETLIFY_AUTH_TOKEN)
+        required: false
+        default: ''
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Deploy via Netlify MCP proxy
+        if: ${{ inputs.proxy_path != '' }}
+        run: npx -y @netlify/mcp@latest --site-id "${{ inputs.site_id }}" --proxy-path "${{ inputs.proxy_path }}"
+      - name: Deploy via Netlify CLI
+        if: ${{ inputs.proxy_path == '' }}
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          NETLIFY_SITE_ID: ${{ inputs.site_id }}
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+        run: |
+          npm run build
+          npx -y netlify-cli@17 deploy --prod --dir=dist --site "$NETLIFY_SITE_ID"

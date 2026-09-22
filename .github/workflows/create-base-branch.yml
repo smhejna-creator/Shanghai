@@ -1,0 +1,25 @@
+# One-off: create a base branch at a given commit (used to bootstrap `main`
+# in a repo whose first branch was a feature branch).
+name: Create base branch
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        required: true
+        default: main
+      sha:
+        required: true
+        default: 50e0849
+
+permissions:
+  contents: write
+
+jobs:
+  create:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - run: git push origin "${{ inputs.sha }}:refs/heads/${{ inputs.branch }}"
