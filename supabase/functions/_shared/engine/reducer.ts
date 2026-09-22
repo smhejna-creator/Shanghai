@@ -260,10 +260,40 @@ export function reduce(ruleSet: RuleSet, prev: GameState, action: Action): Reduc
       log(state, `${action.name} joined.`);
       return done(state);
     }
+    case 'ADD_BOT': {
+      if (state.phase !== 'lobby') return err('WRONG_PHASE', 'Bots can only be added in the lobby');
+      if (action.userId !== state.hostUserId) return err('NOT_HOST', 'Only the host can add bots');
+      if (state.players.length >= rs.players.max) return err('GAME_FULL', 'Game is full');
+      if (playerByUser(state, action.botId)) return err('ALREADY_JOINED', 'Bot already added');
+      state.players.push({
+        seat: state.players.length,
+        userId: action.botId,
+        name: action.name.trim().slice(0, 24) || `Bot ${state.players.length + 1}`,
+        hand: [],
+        buysLeft: rs.buysPerRound,
+        hasLaidDown: false,
+        scores: [],
+        ready: true,
+        connected: true,
+        isBot: true,
+      });
+      log(state, `${action.name} (bot) joined.`);
+      return done(state);
+    }
+    case 'REMOVE_BOT': {
+      if (state.phase !== 'lobby') return err('WRONG_PHASE', 'Bots can only be removed in the lobby');
+      if (action.userId !== state.hostUserId) return err('NOT_HOST', 'Only the host can remove bots');
+      const bot = playerByUser(state, action.botId);
+      if (!bot || !bot.isBot) return err('NOT_A_PLAYER', 'No such bot');
+      state.players = state.players.filter((x) => x.userId !== action.botId).map((x, i) => ({ ...x, seat: i }));
+      log(state, `${bot.name} (bot) removed.`);
+      return done(state);
+    }
     case 'LEAVE': {
       if (state.phase !== 'lobby') return err('WRONG_PHASE', 'Cannot leave a game in progress');
       const p = playerByUser(state, action.userId);
       if (!p) return err('NOT_A_PLAYER', 'Not in this game');
+      if (p.isBot) return err('NOT_A_PLAYER', 'Bots are removed by the host');
       state.players = state.players.filter((x) => x.userId !== action.userId).map((x, i) => ({ ...x, seat: i }));
       log(state, `${p.name} left.`);
       return done(state);

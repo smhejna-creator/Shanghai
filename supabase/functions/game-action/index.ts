@@ -2,6 +2,7 @@
 // Every client action is validated with the same pure engine used in the browser.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {
+  botAction,
   createGame,
   reduce,
   toPublicState,
@@ -82,6 +83,21 @@ async function writeGame(db: SupabaseClient, gameId: string, expectedVersion: nu
   return data === true;
 }
 
+/** Let bots act until a human is needed (or the game pauses). Returns the final state. */
+function driveBots(rs: RuleSet, state: GameState): GameState {
+  for (let i = 0; i < 200; i++) {
+    const a = botAction(rs, state, Date.now());
+    if (!a) break;
+    const r = reduce(rs, state, a);
+    if (!r.ok) {
+      console.error('bot action rejected', a.type, r.error);
+      break;
+    }
+    state = r.state;
+  }
+  return state;
+}
+
 /** Apply an action with optimistic-concurrency retries. */
 async function applyAction(db: SupabaseClient, gameId: string, makeAction: (state: GameState) => Action, expectedVersion?: number) {
   for (let attempt = 0; attempt < 4; attempt++) {
@@ -92,8 +108,9 @@ async function applyAction(db: SupabaseClient, gameId: string, makeAction: (stat
     const action = makeAction(loaded.state);
     const result = reduce(loaded.row.ruleset, loaded.state, action);
     if (!result.ok) return json({ error: result.error, version: loaded.row.version }, 400);
-    const written = await writeGame(db, gameId, loaded.row.version, result.state, result.ruleSet, action);
-    if (written) return json({ ok: true, version: result.state.version });
+    const finalState = driveBots(result.ruleSet, result.state);
+    const written = await writeGame(db, gameId, loaded.row.version, finalState, result.ruleSet, action);
+    if (written) return json({ ok: true, version: finalState.version });
   }
   return json({ error: { code: 'CONFLICT', message: 'Game changed while processing; try again' } }, 409);
 }
@@ -113,6 +130,12 @@ async function tick(db: SupabaseClient, gameId: string) {
     const result = reduce(loaded.row.ruleset, loaded.state, action);
     if (!result.ok) {
       if (result.error.code === 'NOTHING_TO_DO') {
+        // A bot may still owe a move (e.g. after a failed write); let it act.
+        const driven = driveBots(loaded.row.ruleset, loaded.state);
+        if (driven.version !== loaded.state.version) {
+          await writeGame(db, gameId, loaded.row.version, driven, loaded.row.ruleset, action);
+          return json({ ok: true, ticked: i, bots: true });
+        }
         // Clear a stale deadline so pg_cron stops calling us for this game.
         const dl = deadlineOf(loaded.state);
         if (dl === null || new Date(dl).getTime() > Date.now()) {
@@ -122,7 +145,7 @@ async function tick(db: SupabaseClient, gameId: string) {
       }
       return json({ error: result.error }, 400);
     }
-    await writeGame(db, gameId, loaded.row.version, result.state, result.ruleSet, action);
+    await writeGame(db, gameId, loaded.row.version, driveBots(loaded.row.ruleset, result.state), result.ruleSet, action);
   }
   return json({ ok: true, ticked: 5 });
 }
@@ -226,6 +249,7 @@ Deno.serve(async (req) => {
         const expectedVersion = typeof body.expectedVersion === 'number' ? body.expectedVersion : undefined;
         // The server stamps identity and time; clients cannot spoof either.
         const action = { ...raw, userId, now: Date.now() } as Action;
+        if (action.type === 'ADD_BOT') action.botId = crypto.randomUUID();
         return await applyAction(db, gameId, () => action, expectedVersion);
       }
       default:

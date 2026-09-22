@@ -14,6 +14,7 @@ export interface PlayerState {
   scores: number[];
   ready: boolean;
   connected: boolean;
+  isBot?: boolean;
 }
 
 export interface BuyWindow {
@@ -53,6 +54,8 @@ export interface GameState {
 export type Action =
   | { type: 'JOIN'; userId: string; name: string }
   | { type: 'LEAVE'; userId: string }
+  | { type: 'ADD_BOT'; userId: string; botId: string; name: string }
+  | { type: 'REMOVE_BOT'; userId: string; botId: string }
   | { type: 'SET_RULESET'; userId: string; ruleSet: RuleSet }
   | { type: 'READY'; userId: string; ready: boolean }
   | { type: 'START'; userId: string; now: number }

@@ -35,7 +35,9 @@ export function HomeScreen({ user, signOut }: { user: User; signOut: () => void 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col gap-6 px-5 py-8">
       <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-black text-amber-300">Shang Hi</h1>
+        <h1 className="text-3xl font-black text-amber-300">
+          Shang Hi{user.is_anonymous && <span className="ml-2 align-middle rounded bg-white/15 px-2 text-xs font-semibold text-white/80">guest</span>}
+        </h1>
         <Button variant="ghost" size="sm" onClick={signOut}>
           Sign out
         </Button>

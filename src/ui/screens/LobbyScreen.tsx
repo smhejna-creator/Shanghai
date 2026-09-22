@@ -8,6 +8,8 @@ import { Button } from '../components/Button';
 import { RuleSetEditor } from '../components/RuleSetEditor';
 import { useSavedRuleSets } from './SetupScreen';
 
+const BOT_NAMES = ['Ada', 'Turing', 'Hal', 'Marvin', 'Data', 'Bender'];
+
 export function LobbyScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet, joinCode } = game;
   const me = view.players.find((p) => p.userId === user.id);
@@ -68,12 +70,17 @@ export function LobbyScreen({ game, gameId, user, onError }: { game: GameData; g
           {view.players.map((p) => (
             <li key={p.seat} className="flex items-center justify-between rounded-xl bg-black/25 px-4 py-3">
               <span>
+                {p.isBot && '🤖 '}
                 {p.name}
                 {p.userId === view.hostUserId && <span className="ml-2 rounded bg-amber-400/20 px-1.5 text-xs text-amber-300">host</span>}
                 {p.seat === 0 && <span className="ml-2 text-xs text-white/50">deals first</span>}
               </span>
               <span className={`text-sm ${p.ready || p.userId === view.hostUserId ? 'text-emerald-300' : 'text-white/40'}`}>
-                {p.userId === view.hostUserId ? '★' : p.ready ? 'Ready' : 'Not ready'}
+                {p.isBot && isHost ? (
+                  <button className="text-red-300" disabled={busy} onClick={() => act(() => api.action(gameId, { type: 'REMOVE_BOT', botId: p.userId }))}>
+                    Remove
+                  </button>
+                ) : p.userId === view.hostUserId ? '★' : p.ready ? 'Ready' : 'Not ready'}
               </span>
             </li>
           ))}
@@ -95,6 +102,13 @@ export function LobbyScreen({ game, gameId, user, onError }: { game: GameData; g
         <section className="flex flex-col gap-3">
           <Button size="lg" disabled={!canStart || busy} onClick={() => act(() => api.action(gameId, { type: 'START' }))}>
             Start game
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={busy || view.players.length >= ruleSet.players.max}
+            onClick={() => act(() => api.action(gameId, { type: 'ADD_BOT', name: BOT_NAMES[view.players.filter((p) => p.isBot).length % BOT_NAMES.length] }))}
+          >
+            + Add a bot
           </Button>
           {!everyoneReady && <p className="text-center text-xs text-white/60">Waiting for everyone to ready up.</p>}
           <Button variant="secondary" onClick={() => { setDraft(ruleSet); setEditing((e) => !e); }}>
