@@ -23,9 +23,21 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
     setOrder((prev) => {
       const kept = prev.filter((id) => ids.has(id));
       const added = cards.map((c) => c.id).filter((id) => !kept.includes(id));
-      return [...kept, ...added];
+      const next = [...kept, ...added];
+      return next.length === prev.length && next.every((id, i) => id === prev[i]) ? prev : next;
     });
   }, [cards]);
+
+  const dragging = useRef(false);
+  useEffect(() => {
+    const el = scroller.current;
+    if (!el) return;
+    const block = (e: TouchEvent) => {
+      if (dragging.current) e.preventDefault();
+    };
+    el.addEventListener('touchmove', block, { passive: false });
+    return () => el.removeEventListener('touchmove', block);
+  }, []);
 
   const byId = new Map(cards.map((c) => [c.id, c]));
   const ordered = order.map((id) => byId.get(id)).filter((c): c is Card => Boolean(c));
@@ -46,6 +58,7 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
     const timer = window.setTimeout(() => {
       if (start.current && !start.current.moved) {
         start.current.dragging = true;
+        dragging.current = true;
         setDrag({ id, x: e.clientX, over: order.indexOf(id) });
         if (navigator.vibrate) navigator.vibrate(10);
       }
@@ -85,6 +98,13 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
       onToggle(s.id);
     }
     start.current = null;
+    dragging.current = false;
+    setDrag(null);
+  };
+  const onPointerCancel = () => {
+    if (start.current) window.clearTimeout(start.current.timer);
+    start.current = null;
+    dragging.current = false;
     setDrag(null);
   };
 
@@ -95,7 +115,7 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
       style={{ touchAction: drag ? 'none' : 'pan-x' }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
+      onPointerCancel={onPointerCancel}
     >
       {ordered.map((c, i) => (
         <div

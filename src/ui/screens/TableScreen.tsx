@@ -60,7 +60,8 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   };
   const clearSelection = () => setSelected(new Set());
   const selectedCards = hand.filter((c) => selected.has(c.id));
-  const stagedIds = new Set(groups.flat());
+  const stagedIds = useMemo(() => new Set(groups.flat()), [groups]);
+  const unstagedHand = useMemo(() => hand.filter((c) => !stagedIds.has(c.id)), [hand, stagedIds]);
 
   const canDraw = myTurn && (view.phase === 'turn.draw' || view.phase === 'buy.window');
   const canPlay = myTurn && view.phase === 'turn.play';
@@ -112,6 +113,10 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   };
   const tapMeldCard = (meld: Meld, cardId: string) => {
     if (!canPlay || !me?.hasLaidDown) return;
+    if (mode.kind === 'replace') {
+      tapMeld(meld);
+      return;
+    }
     const card = meld.cards.find((c) => c.id === cardId)!;
     if (meld.kind === 'run' && isWild(card, rs) && rs.wildReplacement.enabled && selectedCards.length === 1 && !isWild(selectedCards[0], rs)) {
       setMode({ kind: 'replace', meldId: meld.id, wildCardId: cardId, naturalCardId: selectedCards[0].id });
@@ -132,7 +137,8 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   };
   const onReorder = (ids: string[]) => {
     window.clearTimeout(reorderTimer.current);
-    reorderTimer.current = window.setTimeout(() => api.action(gameId, { type: 'REORDER_HAND', cardIds: ids }).catch(() => {}), 600);
+    const full = [...ids, ...groups.flat().filter((id) => handById.has(id))];
+    reorderTimer.current = window.setTimeout(() => api.action(gameId, { type: 'REORDER_HAND', cardIds: full }).catch(() => {}), 600);
   };
 
   const topDiscard = view.discard[view.discard.length - 1];
@@ -282,7 +288,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
             </button>
           )}
         </div>
-        <Hand cards={hand.filter((c) => !stagedIds.has(c.id))} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
+        <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-3">
           {canPlay && !me?.hasLaidDown && (
             <>

@@ -34,13 +34,7 @@ export function MeldView({ meld, ruleSet, ownerName, highlight, onTap, onTapCard
                 ruleSet={ruleSet}
                 small
                 standsFor={standsFor}
-                onClick={
-                  onTapCard
-                    ? () => {
-                        onTapCard(c.id);
-                      }
-                    : undefined
-                }
+                onClick={onTapCard ? (e) => { e.stopPropagation(); onTapCard(c.id); } : undefined}
               />
             </div>
           );

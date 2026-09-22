@@ -10,7 +10,7 @@ interface Props {
   small?: boolean;
   faceDown?: boolean;
   standsFor?: string;
-  onClick?: () => void;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
   className?: string;
 }
 
