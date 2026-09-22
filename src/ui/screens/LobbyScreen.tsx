@@ -34,7 +34,7 @@ export function LobbyScreen({ game, gameId, user, onError }: { game: GameData; g
   const share = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: 'Shang Hi', text: `Join my Shang Hi game: ${joinCode}`, url: shareUrl });
+        await navigator.share({ title: 'Shanghai', text: `Join my Shanghai game: ${joinCode}`, url: shareUrl });
         return;
       } catch {
         /* fall through */

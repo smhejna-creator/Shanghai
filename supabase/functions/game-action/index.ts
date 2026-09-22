@@ -1,4 +1,4 @@
-// Shang Hi: server-authoritative game actions.
+// Shanghai: server-authoritative game actions.
 // Every client action is validated with the same pure engine used in the browser.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import {

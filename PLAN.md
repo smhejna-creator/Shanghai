@@ -1,4 +1,4 @@
-# Shang Hi — Online Shanghai Rummy (Contract Rummy)
+# Shanghai — Online Shanghai Rummy (Contract Rummy)
 
 This document is the build plan. It defines the configurable `RuleSet`, the
 data model, the full action list, and the phase state machine. Code follows

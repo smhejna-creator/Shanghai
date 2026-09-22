@@ -10,7 +10,7 @@ on:
         default: rjpkmxtvjrawhfosocbt
       site_url:
         required: true
-        default: https://shang-hi.netlify.app
+        default: https://shanghai-rummy.netlify.app
 
 jobs:
   configure:

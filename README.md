@@ -1,4 +1,4 @@
-# Shang Hi
+# Shanghai
 
 Online multiplayer Shanghai Rummy (contract rummy). Vite + React + TypeScript + Tailwind on the
 client, Supabase (magic-link auth, Postgres, Realtime, Edge Functions) on the server, deployed to

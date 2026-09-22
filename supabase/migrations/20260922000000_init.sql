@@ -1,4 +1,4 @@
--- Shang Hi schema. Clients only READ game tables; the game-action Edge Function
+-- Shanghai schema. Clients only READ game tables; the game-action Edge Function
 -- (service role) is the only writer.
 
 create extension if not exists pgcrypto;
