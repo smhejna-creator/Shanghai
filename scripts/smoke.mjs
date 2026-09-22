@@ -81,7 +81,18 @@ const t = await run(playing, 'table', ['Round 1/7', 'two sets of 3', 'Your turn'
 await t.page.locator('[data-card]').first().tap();
 await t.page.waitForTimeout(300);
 if (!(await t.page.innerText('body')).includes('clear 1')) errors.push('[table] tap-select did not select a card');
-await t.page.screenshot({ path: `${process.argv[3]}/table-selected.png`, fullPage: true });
+await t.page.screenshot({ path: `${process.argv[3]}/table-selected.png` });
+// Arrange controls: nudge the selected card right, then auto-group, then sort by suit.
+const firstId = await t.page.locator('[data-card]').first().evaluate((el) => el.querySelector('button')?.textContent);
+await t.page.getByRole('button', { name: 'Move selected right' }).tap();
+await t.page.waitForTimeout(200);
+const secondId = await t.page.locator('[data-card]').nth(1).evaluate((el) => el.querySelector('button')?.textContent);
+if (firstId !== secondId) errors.push('[table] nudge right did not move the selected card');
+await t.page.getByRole('button', { name: '✨ Group' }).tap();
+await t.page.waitForTimeout(200);
+await t.page.getByRole('button', { name: '♠ Suit' }).tap();
+await t.page.waitForTimeout(300);
+await t.page.screenshot({ path: `${process.argv[3]}/table-sorted.png` });
 await t.ctx.close();
 // Home screen
 const h = await (async () => {

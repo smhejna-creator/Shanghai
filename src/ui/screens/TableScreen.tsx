@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { Card, Meld } from '@/engine/index.ts';
-import { cardLabel, eligibleBuyers, findContractMelds, findLayOffs, handScore, isWild } from '@/engine/index.ts';
+import { cardLabel, eligibleBuyers, findContractMelds, findLayOffs, handScore, isWild, rankValue, type Rank } from '@/engine/index.ts';
 import type { GameData } from '@/lib/supabase/useGame';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
@@ -27,6 +27,18 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const hand = view.myHand;
   const handById = useMemo(() => new Map(hand.map((c) => [c.id, c])), [hand]);
   const reorderTimer = useRef<number>();
+  const [order, setOrder] = useState<string[]>(() => hand.map((c) => c.id));
+
+  // Keep the player's arrangement; new cards go on the right.
+  useEffect(() => {
+    setOrder((prev) => {
+      const kept = prev.filter((id) => handById.has(id));
+      const added = hand.map((c) => c.id).filter((id) => !kept.includes(id));
+      const next = [...kept, ...added];
+      return next.length === prev.length && next.every((id, i) => id === prev[i]) ? prev : next;
+    });
+  }, [hand, handById]);
+  const orderedHand = useMemo(() => order.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)), [order, handById]);
 
   useEffect(() => {
     setSelected((s) => new Set([...s].filter((id) => handById.has(id))));
@@ -62,7 +74,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const clearSelection = () => setSelected(new Set());
   const selectedCards = hand.filter((c) => selected.has(c.id));
   const stagedIds = useMemo(() => new Set(groups.flat()), [groups]);
-  const unstagedHand = useMemo(() => hand.filter((c) => !stagedIds.has(c.id)), [hand, stagedIds]);
+  const unstagedHand = useMemo(() => orderedHand.filter((c) => !stagedIds.has(c.id)), [orderedHand, stagedIds]);
 
   const canDraw = myTurn && (view.phase === 'turn.draw' || view.phase === 'buy.window');
   const canPlay = myTurn && view.phase === 'turn.play';
@@ -135,10 +147,64 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     }
     layOffTo(meld);
   };
-  const onReorder = (ids: string[]) => {
-    window.clearTimeout(reorderTimer.current);
+  /** Apply a new order for the unstaged cards; staged cards keep their place at the end. Persists after a short delay. */
+  const applyOrder = (ids: string[]) => {
     const full = [...ids, ...groups.flat().filter((id) => handById.has(id))];
+    setOrder(full);
+    window.clearTimeout(reorderTimer.current);
     reorderTimer.current = window.setTimeout(() => api.action(gameId, { type: 'REORDER_HAND', cardIds: full }).catch(() => {}), 600);
+  };
+  const onReorder = (ids: string[]) => applyOrder(ids);
+  const value = (c: Card) => (isWild(c, rs) ? 99 : rankValue(c.rank as Rank, rs.acesHighLow === 'high' ? 14 : 1));
+  const suitOrder = (c: Card) => (isWild(c, rs) ? 9 : 'SHDC'.indexOf(c.suit));
+  const sortHand = (by: 'rank' | 'suit') => {
+    const sorted = unstagedHand.slice().sort((a, b) => (by === 'rank' ? value(a) - value(b) || suitOrder(a) - suitOrder(b) : suitOrder(a) - suitOrder(b) || value(a) - value(b)));
+    applyOrder(sorted.map((c) => c.id));
+  };
+  /** Move the selected cards one step left or right, keeping them together. */
+  const nudge = (dir: -1 | 1) => {
+    const ids = unstagedHand.map((c) => c.id);
+    const sel = ids.filter((id) => selected.has(id));
+    if (sel.length === 0) return;
+    const rest = ids.filter((id) => !selected.has(id));
+    const first = ids.indexOf(sel[0]);
+    const last = ids.indexOf(sel[sel.length - 1]);
+    // Insert position in `rest`: number of unselected cards before the block, shifted by one.
+    let pos = ids.slice(0, first).filter((id) => !selected.has(id)).length;
+    if (dir > 0) {
+      const after = ids.slice(last + 1).filter((id) => !selected.has(id));
+      if (after.length === 0) return;
+      pos += 1;
+    } else {
+      if (pos === 0) return;
+      pos -= 1;
+    }
+    const next = [...rest.slice(0, pos), ...sel, ...rest.slice(pos)];
+    applyOrder(next);
+  };
+  /** Order the hand so cards that make sets or runs sit together. */
+  const autoGroup = () => {
+    const cards = unstagedHand.slice();
+    const used = new Set<string>();
+    const groupsOut: Card[][] = [];
+    // Sets of 2+ by rank
+    const byRank = new Map<string, Card[]>();
+    for (const c of cards) if (!isWild(c, rs)) byRank.set(c.rank, [...(byRank.get(c.rank) ?? []), c]);
+    for (const list of byRank.values()) if (list.length >= 2) { groupsOut.push(list); list.forEach((c) => used.add(c.id)); }
+    // Runs of 2+ by suit among the rest
+    for (const suit of ['S', 'H', 'D', 'C']) {
+      const list = cards.filter((c) => !used.has(c.id) && !isWild(c, rs) && c.suit === suit).sort((a, b) => value(a) - value(b));
+      let run: Card[] = [];
+      const flush = () => { if (run.length >= 2) { groupsOut.push(run); run.forEach((c) => used.add(c.id)); } run = []; };
+      for (const c of list) {
+        if (run.length && value(c) - value(run[run.length - 1]) > 2) flush();
+        if (!run.length || value(c) !== value(run[run.length - 1])) run.push(c);
+      }
+      flush();
+    }
+    const wilds = cards.filter((c) => isWild(c, rs));
+    const loose = cards.filter((c) => !used.has(c.id) && !isWild(c, rs)).sort((a, b) => value(a) - value(b));
+    applyOrder([...groupsOut.flat(), ...loose, ...wilds].map((c) => c.id));
   };
 
   const topDiscard = view.discard[view.discard.length - 1];
@@ -278,13 +344,22 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
       <footer className="safe-bottom border-t border-line bg-[linear-gradient(180deg,#11161e_0%,#0b0e13_100%)]">
         <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60">
           <span>
-            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
+            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts · <span className="text-white/40">tap to select, hold to drag</span>
           </span>
           {selected.size > 0 ? (
             <button onClick={clearSelection} className="text-gold underline">clear {selected.size}</button>
           ) : (
             me && <span>{me.buysLeft} buy{me.buysLeft === 1 ? '' : 's'} left</span>
           )}
+        </div>
+        <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto px-3 pt-2">
+          <span className="label mr-1 shrink-0">Arrange</span>
+          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={autoGroup}>✨ Group</button>
+          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('suit')}>♠ Suit</button>
+          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('rank')}>7 Rank</button>
+          <span className="mx-1 h-5 w-px shrink-0 bg-line" />
+          <button className="shrink-0 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(-1)} aria-label="Move selected left">◀ Move</button>
+          <button className="shrink-0 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(1)} aria-label="Move selected right">Move ▶</button>
         </div>
         <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
         <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-2">
