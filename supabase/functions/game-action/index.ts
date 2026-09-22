@@ -217,7 +217,12 @@ Deno.serve(async (req) => {
         const raw = body.action as Record<string, unknown>;
         if (typeof gameId !== 'string' || !raw || typeof raw.type !== 'string')
           return json({ error: { code: 'BAD_REQUEST', message: 'gameId and action required' } }, 400);
-        if (raw.type === 'TICK') return json({ error: { code: 'FORBIDDEN', message: 'TICK is server-only' } }, 403);
+        if (raw.type === 'TICK') {
+          // Any member may poke the clock; the server's own time is what counts.
+          const { data: member } = await db.from('game_players').select('seat').eq('game_id', gameId).eq('user_id', userId).maybeSingle();
+          if (!member) return json({ error: { code: 'NOT_A_PLAYER', message: 'Not in this game' } }, 403);
+          return await tick(db, gameId);
+        }
         const expectedVersion = typeof body.expectedVersion === 'number' ? body.expectedVersion : undefined;
         // The server stamps identity and time; clients cannot spoof either.
         const action = { ...raw, userId, now: Date.now() } as Action;

@@ -558,7 +558,7 @@ function autoDraw(state: GameState, rs: RuleSet, now: number, done: (s: GameStat
 }
 
 /** Convenience for UIs: which seats may buy right now. */
-export function eligibleBuyers(state: GameState): number[] {
+export function eligibleBuyers(state: Pick<GameState, 'phase' | 'buyWindow'>): number[] {
   const bw = state.buyWindow;
   if (!bw || state.phase !== 'buy.window') return [];
   return bw.order.slice(bw.index);
