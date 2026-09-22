@@ -1,0 +1,31 @@
+# One-off: set Supabase Auth site URL + redirect allow list via the Management API.
+# Requires the repository secret SUPABASE_ACCESS_TOKEN (a Supabase personal access token).
+name: Configure Supabase Auth URLs
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_ref:
+        required: true
+        default: rjpkmxtvjrawhfosocbt
+      site_url:
+        required: true
+        default: https://shang-hi.netlify.app
+
+jobs:
+  configure:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update auth config
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          REF: ${{ inputs.project_ref }}
+          SITE: ${{ inputs.site_url }}
+        run: |
+          test -n "$SUPABASE_ACCESS_TOKEN" || { echo "SUPABASE_ACCESS_TOKEN secret is not set"; exit 1; }
+          curl -sS -X PATCH "https://api.supabase.com/v1/projects/$REF/config/auth" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
+            -d "{\"site_url\":\"$SITE\",\"uri_allow_list\":\"$SITE/**,http://localhost:5173/**\"}" \
+            -o /dev/null -w "PATCH status: %{http_code}\n"
+          curl -sS "https://api.supabase.com/v1/projects/$REF/config/auth" -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); print("site_url:", d.get("site_url")); print("uri_allow_list:", d.get("uri_allow_list"))'
