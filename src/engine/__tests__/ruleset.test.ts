@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { classic2sWild, contractName, houseDefault, suggestedDecks, validateRuleSet } from '../ruleset';
-import { customRules, RULESETS } from './helpers';
+import { classic2sWild, contractName, houseDefault, suggestedDecks, validateRuleSet } from '../ruleset.ts';
+import { customRules, RULESETS } from './helpers.ts';
 
 describe('ruleset presets', () => {
   it('house default matches the spec', () => {

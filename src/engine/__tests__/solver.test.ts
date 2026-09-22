@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { findContractMelds, findLayOffs } from '../solver';
-import { matchContract } from '../contracts';
-import type { SetMeld, RunMeld } from '../melds';
-import { c, cs, RULESETS } from './helpers';
+import { findContractMelds, findLayOffs } from '../solver.ts';
+import { matchContract } from '../contracts.ts';
+import type { SetMeld, RunMeld } from '../melds.ts';
+import { c, cs, RULESETS } from './helpers.ts';
 
 describe.each(RULESETS)('solver under %s', (_n, rs) => {
   it('finds round-1 melds in a hand when they exist, and validates them', () => {

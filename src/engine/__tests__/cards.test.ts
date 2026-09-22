@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { buildDeck, cardScore, handScore, isWild, shuffle } from '../cards';
-import { houseDefault } from '../ruleset';
-import { c, cs, customRules, RULESETS } from './helpers';
+import { buildDeck, cardScore, handScore, isWild, shuffle } from '../cards.ts';
+import { houseDefault } from '../ruleset.ts';
+import { c, cs, customRules, RULESETS } from './helpers.ts';
 
 describe.each(RULESETS)('cards under %s', (_n, rs) => {
   it('builds the right number of cards', () => {

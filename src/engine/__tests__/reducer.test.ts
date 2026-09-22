@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { createGame, eligibleBuyers, reduce } from '../reducer';
-import { houseDefault } from '../ruleset';
-import type { RunMeld, SetMeld } from '../melds';
-import { toPlayerView, toPublicState } from '../view';
-import { findContractMelds, findLayOffs } from '../solver';
-import { c, cs, fail, ids, NOW, ok, playing, RULESETS, startedGame } from './helpers';
+import { createGame, eligibleBuyers, reduce } from '../reducer.ts';
+import { houseDefault } from '../ruleset.ts';
+import type { RunMeld, SetMeld } from '../melds.ts';
+import { toPlayerView, toPublicState } from '../view.ts';
+import { findContractMelds, findLayOffs } from '../solver.ts';
+import { c, cs, fail, ids, NOW, ok, playing, RULESETS, startedGame } from './helpers.ts';
 
 describe.each(RULESETS)('lobby under %s', (_n, rs) => {
   it('joins, readies, and starts with dealer at seat 0', () => {

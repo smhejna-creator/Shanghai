@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { matchContract } from '../contracts';
-import { houseDefault } from '../ruleset';
-import { c, cs, customRules, RULESETS } from './helpers';
+import { matchContract } from '../contracts.ts';
+import { houseDefault } from '../ruleset.ts';
+import { c, cs, customRules, RULESETS } from './helpers.ts';
 
 describe('contracts (house default)', () => {
   const rs = houseDefault();

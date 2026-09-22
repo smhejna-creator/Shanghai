@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { classic2sWild, houseDefault } from '../ruleset';
-import { buildRun, buildSet, layOffCards, replaceWildInRun, validateRunOrder, type Meld, type RunMeld } from '../melds';
-import { c, cs, customRules, RULESETS } from './helpers';
+import { classic2sWild, houseDefault } from '../ruleset.ts';
+import { buildRun, buildSet, layOffCards, replaceWildInRun, validateRunOrder, type Meld, type RunMeld } from '../melds.ts';
+import { c, cs, customRules, RULESETS } from './helpers.ts';
 
 const W = (rs = houseDefault()) => c(rs.wilds.ranks[0] ? `${rs.wilds.ranks[0]}C` : 'JOKER');
 

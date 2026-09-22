@@ -1,8 +1,8 @@
-import type { Card, Suit } from '../cards';
-import type { Contract, MeldRequirement, RuleSet } from '../ruleset';
-import { classic2sWild, contractName, houseDefault } from '../ruleset';
-import { createGame, reduce } from '../reducer';
-import type { Action, GameState, PlayerState } from '../state';
+import type { Card, Suit } from '../cards.ts';
+import type { Contract, MeldRequirement, RuleSet } from '../ruleset.ts';
+import { classic2sWild, contractName, houseDefault } from '../ruleset.ts';
+import { createGame, reduce } from '../reducer.ts';
+import type { Action, GameState, PlayerState } from '../state.ts';
 
 let counter = 0;
 /** c('7H'), c('10S'), c('AD'), c('JOKER'). Ids are unique per call. */
