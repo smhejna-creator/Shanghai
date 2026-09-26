@@ -15,7 +15,7 @@ import { Seat } from '../components/Seat';
 
 type Mode = { kind: 'idle' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
 
-export function TableScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
+export function TableScreen({ game, gameId, user, onError }: { game: Extract<GameData, { gameType: 'shanghai' }>; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet: rs } = game;
   const desktop = useIsDesktop();
   const me = view.players.find((p) => p.userId === user.id);
@@ -311,7 +311,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     <div className="flex h-full flex-col">
       {/* Top bar */}
       <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur lg:px-6">
-        <div className="hidden lg:block"><Logo size="sm" className="!items-start" /></div>
+        <div className="hidden lg:block"><Logo size="sm" className="!items-start" subtitle="Contract Rummy" /></div>
         <div className="lg:text-center">
           <div className="label">Round {view.roundIndex + 1} of {rs.rounds.length}</div>
           <div className="font-display text-base font-bold capitalize text-white lg:text-xl">

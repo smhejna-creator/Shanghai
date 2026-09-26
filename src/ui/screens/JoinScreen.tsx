@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
+import { GAMES } from '@/engine/index.ts';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
@@ -39,7 +40,7 @@ export function JoinScreen({ user }: { user: User }) {
         {info && (
           <>
             <p className="mb-4 text-sm text-white/70">
-              Hosted by <b className="text-white">{info.host_name}</b> · {info.player_count} seated · {info.ruleset_name}
+              <b className="text-gold">{GAMES[info.game_type]?.title ?? 'Shanghai'}</b> · hosted by <b className="text-white">{info.host_name}</b> · {info.player_count} seated · {info.ruleset_name}
             </p>
             <label className="label">Your name</label>
             <input value={name} onChange={(e) => setName(e.target.value)} maxLength={24} className="input mb-3 mt-2" placeholder="Your name" />

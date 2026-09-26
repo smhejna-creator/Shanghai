@@ -40,7 +40,7 @@ export function AuthScreen() {
           ))}
         </div>
         <Logo size="lg" />
-        <p className="mt-3 text-center text-sm text-white/60">Contract rummy with friends, on your phone.</p>
+        <p className="mt-3 text-center text-sm text-white/60">Shanghai rummy and Swoop with friends, on your phone.</p>
       </div>
 
       {!supabaseConfigured && (
