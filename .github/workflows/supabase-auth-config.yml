@@ -10,7 +10,7 @@ on:
         default: rjpkmxtvjrawhfosocbt
       site_url:
         required: true
-        default: https://shanghai-rummy.netlify.app
+        default: https://winninghand.netlify.app
 
 jobs:
   configure:

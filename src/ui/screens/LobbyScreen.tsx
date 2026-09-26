@@ -172,7 +172,7 @@ export function LobbyScreen({ game, gameId, user, onError }: { game: GameData; g
   return (
     <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-4 py-4 lg:max-w-[1400px] lg:px-8 lg:py-6">
       <header className="flex items-center justify-between">
-        <Logo size="sm" className="!items-start" title={mod.title.toUpperCase()} subtitle={gameType === 'swoop' ? 'Card Room' : 'Contract Rummy'} />
+        <Logo size="sm" className="!items-start" title={mod.title.toUpperCase()} subtitle="Winning Hand" />
         <div className="text-right">
           <div className="label">{mod.title} · {ruleSet.name}</div>
           <div className="text-xs text-white/50">{roundsLabel} · {ruleSet.players.min}–{ruleSet.players.max} players</div>

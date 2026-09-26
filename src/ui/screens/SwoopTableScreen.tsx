@@ -166,7 +166,7 @@ export function SwoopTableScreen({ game, gameId, user, onError }: { game: SwoopG
   return (
     <div className="flex h-full flex-col">
       <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur lg:px-6">
-        <div className="hidden lg:block"><Logo size="sm" className="!items-start" title="SWOOP" subtitle="Card Room" /></div>
+        <div className="hidden lg:block"><Logo size="sm" className="!items-start" title="SWOOP" subtitle="Winning Hand" /></div>
         <div className="lg:text-center">
           <div className="label">Swoop · hand {view.roundIndex + 1} of {rs.rounds}</div>
           <div className="font-display text-base font-bold text-white lg:text-xl">{view.phase === 'swap' ? 'Swap phase' : pileHint}</div>
