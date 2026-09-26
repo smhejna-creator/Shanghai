@@ -49,7 +49,7 @@ export function SetupScreen({ user }: { user: User }) {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6 lg:max-w-3xl lg:py-10">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold gold-text">New game</h1>
         <Button variant="ghost" size="sm" onClick={() => nav('/')}>
@@ -73,7 +73,7 @@ export function RuleSetsScreen({ user }: { user: User }) {
   const [rs, setRs] = useState<RuleSet>(houseDefault);
   const { saved, save, remove } = useSavedRuleSets(user.id);
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6 lg:max-w-3xl lg:py-10">
       <header className="flex items-center justify-between">
         <h1 className="font-display text-2xl font-bold gold-text">Saved rule sets</h1>
         <Button variant="ghost" size="sm" onClick={() => nav('/')}>

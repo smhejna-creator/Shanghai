@@ -39,7 +39,7 @@ export function GameScreen({ user }: { user: User }) {
   if (view.phase === 'lobby') body = <LobbyScreen game={data} gameId={id!} user={user} onError={setToast} />;
   else if (view.phase === 'round.over')
     body = (
-      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise">
+      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise lg:max-w-2xl lg:py-12">
         <Logo size="sm" />
         <h1 className="font-display text-3xl font-bold">Round {view.roundIndex + 1} <span className="gold-text">complete</span></h1>
         <p className="text-white/70">
@@ -58,7 +58,7 @@ export function GameScreen({ user }: { user: User }) {
     );
   else if (view.phase === 'game.over')
     body = (
-      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise">
+      <div className="safe-top mx-auto flex max-w-md flex-col gap-4 px-5 py-6 animate-rise lg:max-w-2xl lg:py-12">
         <Logo size="sm" />
         <div className="panel flex flex-col items-center gap-1 border-gold/40 p-5 text-center">
           <div className="text-5xl">🏆</div>

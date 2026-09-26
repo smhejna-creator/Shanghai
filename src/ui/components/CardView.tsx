@@ -7,7 +7,7 @@ interface Props {
   card: Card;
   ruleSet: RuleSet;
   selected?: boolean;
-  size?: 'xs' | 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   faceDown?: boolean;
   standsFor?: string;
   onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
@@ -19,6 +19,7 @@ const SIZES = {
   xs: { box: 'w-7 h-10 rounded-[4px]', idx: 'text-[9px] leading-none', pip: 'text-sm', pad: 'p-0.5' },
   sm: { box: 'w-10 h-14 rounded-md', idx: 'text-[11px] leading-none', pip: 'text-xl', pad: 'p-1' },
   md: { box: 'w-[60px] h-[86px] rounded-lg', idx: 'text-[13px] leading-none', pip: 'text-3xl', pad: 'p-1.5' },
+  lg: { box: 'w-[76px] h-[108px] rounded-xl', idx: 'text-[15px] leading-none', pip: 'text-4xl', pad: 'p-2' },
 };
 
 export function CardView({ card, ruleSet, selected, size = 'md', faceDown, standsFor, onClick, className = '', dim }: Props) {
@@ -60,7 +61,7 @@ export function CardView({ card, ruleSet, selected, size = 'md', faceDown, stand
 }
 
 /** A small stack of face-down cards suggesting a pile. */
-export function CardStack({ count, size = 'md', onClick, disabled }: { count: number; size?: 'sm' | 'md'; onClick?: () => void; disabled?: boolean }) {
+export function CardStack({ count, size = 'md', onClick, disabled }: { count: number; size?: 'sm' | 'md' | 'lg'; onClick?: () => void; disabled?: boolean }) {
   const layers = Math.min(4, Math.max(1, Math.ceil(count / 20)));
   const box = SIZES[size].box;
   return (

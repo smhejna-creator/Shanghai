@@ -10,6 +10,7 @@ interface Props {
   selected: Set<string>;
   onToggle: (id: string) => void;
   onReorder: (ids: string[]) => void;
+  size?: 'md' | 'lg';
 }
 
 /** Two neighbours "belong together" when they could share a set or a run. Used for visual gaps. */
@@ -24,7 +25,7 @@ export function related(a: Card, b: Card, rs: RuleSet): boolean {
 }
 
 /** Horizontal, scrollable fan. Tap selects; press-and-hold then drag reorders. */
-export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
+export function Hand({ cards, ruleSet, selected, onToggle, onReorder, size = 'md' }: Props) {
   const [drag, setDrag] = useState<{ id: string; over: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const start = useRef<{ id: string; x: number; y: number; moved: boolean; timer?: number; dragging: boolean } | null>(null);
@@ -102,7 +103,7 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
   return (
     <div
       ref={scroller}
-      className="no-scrollbar flex touch-pan-x select-none items-end overflow-x-auto px-5 pb-4 pt-6"
+      className="no-scrollbar flex touch-pan-x select-none items-end overflow-x-auto px-5 pb-4 pt-6 lg:justify-center"
       style={{ touchAction: drag ? 'none' : 'pan-x', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
       onPointerMove={onPointerMove}
       onPointerUp={(e) => finish(e.clientX)}
@@ -117,10 +118,10 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
             key={c.id}
             data-card
             onPointerDown={onPointerDown(c.id)}
-            className={`transition-all ${i === 0 ? '' : gap ? 'ml-2' : '-ml-6'} ${drag?.id === c.id ? 'z-20 scale-110 opacity-80' : ''} ${drag && drag.over === i && drag.id !== c.id ? '!ml-3' : ''}`}
+            className={`transition-all ${i === 0 ? '' : gap ? 'ml-2' : size === 'lg' ? '-ml-7' : '-ml-6'} ${drag?.id === c.id ? 'z-20 scale-110 opacity-80' : ''} ${drag && drag.over === i && drag.id !== c.id ? '!ml-3' : ''}`}
             style={{ zIndex: drag?.id === c.id ? 30 : i, transform: selected.has(c.id) ? undefined : `rotate(${tilt}deg) translateY(${Math.abs(tilt) * 0.3}px)` }}
           >
-            <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} />
+            <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} size={size} />
           </div>
         );
       })}

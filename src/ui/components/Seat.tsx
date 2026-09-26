@@ -35,7 +35,7 @@ export function Seat({ player, active, isDealer, isMe, deadline, totalSeconds, c
   const frac = deadline && totalSeconds ? Math.min(1, remaining / (totalSeconds * 1000)) : 1;
   const secs = Math.ceil(remaining / 1000);
   const color = AVATAR_COLORS[player.seat % AVATAR_COLORS.length];
-  const avatar = compact ? 'h-10 w-10 text-sm' : 'h-12 w-12 text-base';
+  const avatar = compact ? 'h-10 w-10 text-sm lg:h-14 lg:w-14 lg:text-lg' : 'h-12 w-12 text-base lg:h-16 lg:w-16 lg:text-xl';
 
   return (
     <div className={`flex flex-col items-center gap-1 ${!player.connected ? 'opacity-50' : ''}`}>
@@ -66,7 +66,7 @@ export function Seat({ player, active, isDealer, isMe, deadline, totalSeconds, c
         )}
         {wentOut && <div className="absolute -right-2 -top-1 rounded-full bg-gold px-1 text-[9px] font-extrabold uppercase text-ink shadow">out</div>}
       </div>
-      <div className={`max-w-[84px] truncate text-center font-semibold ${compact ? 'text-[11px]' : 'text-xs'} ${isMe ? 'text-gold' : 'text-white'}`}>{player.name}</div>
+      <div className={`max-w-[84px] truncate text-center font-semibold lg:max-w-[120px] lg:text-sm ${compact ? 'text-[11px]' : 'text-xs'} ${isMe ? 'text-gold' : 'text-white'}`}>{player.name}</div>
       <div className="flex items-center gap-1">
         <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/90">🂠 {player.handCount}</span>
         <span className="flex items-center gap-0.5" title={`${player.buysLeft} buys left`}>

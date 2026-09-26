@@ -34,40 +34,50 @@ export function HomeScreen({ user, signOut }: { user: User; signOut: () => void 
   };
 
   return (
-    <div className="safe-top mx-auto flex min-h-full max-w-md flex-col gap-5 px-5 py-6">
+    <div className="safe-top mx-auto flex min-h-full max-w-md flex-col gap-5 px-5 py-6 lg:max-w-4xl lg:py-10">
       <header className="flex items-center justify-between">
-        <Logo size="sm" className="!items-start" />
+        <Logo size="md" className="!items-start" />
         <div className="flex items-center gap-2">
           {user.is_anonymous && <span className="rounded-full border border-line bg-ink-3 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white/60">Guest</span>}
           <Button variant="ghost" size="sm" onClick={signOut}>Sign out</Button>
         </div>
       </header>
 
-      <section className="panel p-4">
-        <label className="label">Your name at the table</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => api.setDisplayName(user.id, name.trim().slice(0, 24) || 'Player')} maxLength={24} className="input mt-2" />
-      </section>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <section className="panel flex flex-col gap-3 p-5">
+          <div>
+            <div className="font-display text-xl font-bold">Open a table</div>
+            <p className="text-sm text-white/55">Pick the house rules, invite friends or add bots, and deal.</p>
+          </div>
+          <label className="label">Your name at the table</label>
+          <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => api.setDisplayName(user.id, name.trim().slice(0, 24) || 'Player')} maxLength={24} className="input" />
+          <Button size="lg" onClick={() => nav('/new')}>♠ New table</Button>
+        </section>
 
-      <section className="grid gap-3">
-        <Button size="lg" onClick={() => nav('/new')}>♠ Open a table</Button>
-        <form onSubmit={join} className="panel flex gap-2 p-2">
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="INVITE CODE"
-            maxLength={6}
-            autoCapitalize="characters"
-            className="input min-w-0 flex-1 !border-0 !bg-transparent text-center font-mono text-lg font-bold uppercase tracking-[0.35em]"
-          />
-          <Button type="submit" variant="outline" disabled={busy || code.length < 4}>Join</Button>
-        </form>
-        {error && <p className="text-sm text-red-300">{error}</p>}
-      </section>
+        <section className="panel flex flex-col gap-3 p-5">
+          <div>
+            <div className="font-display text-xl font-bold">Join with a code</div>
+            <p className="text-sm text-white/55">Got an invite? Enter the 6-character code.</p>
+          </div>
+          <form onSubmit={join} className="flex flex-col gap-3">
+            <input
+              value={code}
+              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              placeholder="ABC123"
+              maxLength={6}
+              autoCapitalize="characters"
+              className="input text-center font-mono text-2xl font-bold uppercase tracking-[0.4em]"
+            />
+            <Button type="submit" size="lg" variant="outline" disabled={busy || code.length < 4}>Take a seat</Button>
+          </form>
+          {error && <p className="text-sm text-red-300">{error}</p>}
+        </section>
+      </div>
 
       {games.length > 0 && (
         <section>
           <h2 className="label mb-2">Your tables</h2>
-          <ul className="grid gap-2">
+          <ul className="grid gap-2 lg:grid-cols-2">
             {games.map((g) => (
               <li key={g.id}>
                 <Link to={`/g/${g.id}`} className="panel flex items-center justify-between px-4 py-3 hover:border-gold/40">

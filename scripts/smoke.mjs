@@ -48,8 +48,8 @@ const session = { access_token: token, refresh_token: 'r', token_type: 'bearer',
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const errors = [];
-async function run(state, label, checks) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+async function run(state, label, checks, desktop = false) {
+  const ctx = await browser.newContext(desktop ? { viewport: { width: 1440, height: 900 } } : { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('WebSocket')) errors.push(`[${label}] ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`[${label}] pageerror ${e.message}`));
@@ -94,6 +94,22 @@ await t.page.getByRole('button', { name: '♠ Suit' }).tap();
 await t.page.waitForTimeout(300);
 await t.page.screenshot({ path: `${process.argv[3]}/table-sorted.png` });
 await t.ctx.close();
+// Desktop views
+for (const [st, label] of [[lobby, 'lobby-desktop'], [playing, 'table-desktop']]) {
+  const d = await run(st, label, [], true);
+  await d.ctx.close();
+}
+{
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(`[home-desktop] pageerror ${e.message}`));
+  await page.route('http://fake.supabase.local/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.addInitScript((sess) => { localStorage.setItem('sb-fake-auth-token', JSON.stringify(sess)); }, session);
+  await page.goto('http://localhost:4173/');
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: `${process.argv[3]}/home-desktop.png` });
+  await ctx.close();
+}
 // Home screen
 const h = await (async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });

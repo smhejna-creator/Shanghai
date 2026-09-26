@@ -7,7 +7,8 @@ import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
 import { CardStack, CardView } from '../components/CardView';
 import { Countdown } from '../components/Countdown';
-import { Felt, arcPosition } from '../components/Felt';
+import { Felt, seatPosition, useIsDesktop } from '../components/Felt';
+import { Logo } from '../components/Logo';
 import { Hand } from '../components/Hand';
 import { MeldView } from '../components/MeldView';
 import { Seat } from '../components/Seat';
@@ -16,6 +17,7 @@ type Mode = { kind: 'idle' } | { kind: 'replace'; meldId: string; wildCardId: st
 
 export function TableScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet: rs } = game;
+  const desktop = useIsDesktop();
   const me = view.players.find((p) => p.userId === user.id);
   const mySeat = me?.seat ?? -1;
   const myTurn = view.currentSeat === mySeat;
@@ -228,163 +230,182 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     return '';
   })();
 
+  const cardSize = desktop ? 'lg' : 'md';
+  const meldsPanel = (
+    <>
+      {view.melds.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-white/15 py-4 text-center text-xs text-white/40">No melds on the table yet</p>
+      ) : (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+          {view.melds.map((m) => (
+            <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={view.players[m.ownerSeat]?.name ?? ''} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+  const stagedPanel = groups.length > 0 && (
+    <div className="mt-2 rounded-xl border border-gold/40 bg-gold/10 p-2 animate-rise">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="label !text-gold">Ready to lay down · {groups.length}/{contract.melds.length}</span>
+        <button className="text-xs text-white/60 underline" onClick={() => setGroups([])}>clear</button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {groups.map((g, gi) => (
+          <button key={gi} className="flex rounded-lg bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
+            {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c, i) => (
+              <div key={c.id} className="-ml-4 first:ml-0" style={{ zIndex: i }}>
+                <CardView card={c} ruleSet={rs} size="sm" />
+              </div>
+            ))}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  const buyBar = view.phase === 'buy.window' && bw ? (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 animate-rise">
+      <div>
+        <div className="label !text-gold">Buy window · <Countdown deadline={bw.deadline} /></div>
+        <div className="text-xs text-white/80">{status}</div>
+      </div>
+      {canBuy && (
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
+            {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>Pass</Button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p className="py-1 text-center text-xs text-white/60 lg:text-sm">{status}</p>
+  );
+  const logPanel = (
+    <details className="text-xs text-white/40 lg:open:text-white/60" open={desktop}>
+      <summary className="label cursor-pointer">Table log</summary>
+      <ul className="mt-1 max-h-48 space-y-0.5 overflow-y-auto">
+        {view.log.slice().reverse().map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+    </details>
+  );
+
   return (
     <div className="flex h-full flex-col">
       {/* Top bar */}
-      <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur">
-        <div>
+      <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur lg:px-6">
+        <div className="hidden lg:block"><Logo size="sm" className="!items-start" /></div>
+        <div className="lg:text-center">
           <div className="label">Round {view.roundIndex + 1} of {rs.rounds.length}</div>
-          <div className="font-display text-base font-bold capitalize text-white">
+          <div className="font-display text-base font-bold capitalize text-white lg:text-xl">
             {contract.name}
             {contract.noDiscard && <span className="ml-2 rounded bg-red-500/30 px-1.5 align-middle text-[9px] font-bold uppercase tracking-wider text-red-200">no discard</span>}
           </div>
         </div>
         <div className="text-right">
           <div className={`label ${myTurn ? '!text-gold' : ''}`}>{myTurn ? 'Your turn' : `${current?.name}'s turn`}</div>
-          <Countdown deadline={view.phase === 'buy.window' ? bw?.deadline : view.turnDeadline} className="font-display text-xl font-bold" />
+          <Countdown deadline={view.phase === 'buy.window' ? bw?.deadline : view.turnDeadline} className="font-display text-xl font-bold lg:text-2xl" />
         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto">
-        {/* The table */}
-        <div className="px-2 pt-2">
-          <Felt className="h-[330px]">
-            {others.map((p, i) => (
-              <div key={p.seat} className="absolute -translate-x-1/2 -translate-y-1/2" style={arcPosition(i, others.length)}>
-                <Seat player={p} active={p.seat === view.currentSeat} isDealer={p.seat === view.dealerSeat} isMe={false} deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact wentOut={view.wentOutSeat === p.seat} />
-              </div>
-            ))}
-
-            {/* Center: piles */}
-            <div className="absolute left-1/2 top-[51%] flex -translate-x-1/2 -translate-y-1/2 items-end gap-5">
-              <div className="flex flex-col items-center gap-1">
-                <div className={canDraw && !busy ? 'rounded-lg ring-2 ring-gold/70 shadow-glow' : ''}>
-                  <CardStack count={view.stockCount} disabled={!canDraw || busy} onClick={() => send({ type: 'DRAW_STOCK' })} />
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <main className="min-h-0 flex-1 overflow-y-auto lg:flex lg:flex-col lg:overflow-hidden">
+          {/* The table */}
+          <div className="px-2 pt-2 lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-8 lg:py-4">
+            <Felt className="h-[330px] lg:h-[min(60vh,600px)] lg:max-w-[1100px]">
+              {others.map((p, i) => (
+                <div key={p.seat} className="absolute -translate-x-1/2 -translate-y-1/2" style={seatPosition(i, others.length, desktop ? 'ring' : 'arc')}>
+                  <Seat player={p} active={p.seat === view.currentSeat} isDealer={p.seat === view.dealerSeat} isMe={false} deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact={!desktop} wentOut={view.wentOutSeat === p.seat} />
                 </div>
-                <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80">Stock · {view.stockCount}</span>
-              </div>
-              <div className="flex flex-col items-center gap-1">
-                <button type="button" disabled={!canDraw || !topDiscard || busy} onClick={() => send({ type: 'DRAW_DISCARD' })} className={`rounded-lg disabled:opacity-90 ${canDraw && topDiscard && !busy ? 'ring-2 ring-gold/70 shadow-glow' : ''}`}>
-                  {topDiscard ? <CardView card={topDiscard} ruleSet={rs} /> : <div className="h-[86px] w-[60px] rounded-lg border border-dashed border-white/30" />}
-                </button>
-                <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80">Discard · {view.discard.length}</span>
-              </div>
-            </div>
-
-            {me && (
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2">
-                <Seat player={me} active={myTurn} isDealer={me.seat === view.dealerSeat} isMe deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact wentOut={view.wentOutSeat === me.seat} />
-              </div>
-            )}
-          </Felt>
-        </div>
-
-        {view.phase === 'buy.window' && bw ? (
-          <div className="mx-3 mt-2 flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 animate-rise">
-            <div>
-              <div className="label !text-gold">Buy window · <Countdown deadline={bw.deadline} /></div>
-              <div className="text-xs text-white/80">{status}</div>
-            </div>
-            {canBuy && (
-              <div className="flex shrink-0 gap-2">
-                <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
-                  {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
-                </Button>
-                <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>Pass</Button>
-              </div>
-            )}
-          </div>
-        ) : (
-          <p className="px-4 pt-2 text-center text-xs text-white/60">{status}</p>
-        )}
-
-        {/* Melds */}
-        <div className="px-3 pt-2">
-          <div className="label mb-1.5">On the table</div>
-          {view.melds.length === 0 ? (
-            <p className="rounded-xl border border-dashed border-white/15 py-3 text-center text-xs text-white/40">No melds yet</p>
-          ) : (
-            <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1">
-              {view.melds.map((m) => (
-                <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={view.players[m.ownerSeat]?.name ?? ''} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
               ))}
-            </div>
-          )}
-        </div>
 
-        {groups.length > 0 && (
-          <div className="mx-3 mt-2 rounded-xl border border-gold/40 bg-gold/10 p-2 animate-rise">
-            <div className="mb-1 flex items-center justify-between">
-              <span className="label !text-gold">Ready to lay down · {groups.length}/{contract.melds.length}</span>
-              <button className="text-xs text-white/60 underline" onClick={() => setGroups([])}>clear</button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {groups.map((g, gi) => (
-                <button key={gi} className="flex rounded-lg bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
-                  {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c, i) => (
-                    <div key={c.id} className="-ml-4 first:ml-0" style={{ zIndex: i }}>
-                      <CardView card={c} ruleSet={rs} size="sm" />
-                    </div>
-                  ))}
-                </button>
-              ))}
-            </div>
+              {/* Center: piles */}
+              <div className="absolute left-1/2 top-[51%] flex -translate-x-1/2 -translate-y-1/2 items-end gap-5 lg:top-1/2 lg:gap-8">
+                <div className="flex flex-col items-center gap-1">
+                  <div className={canDraw && !busy ? 'rounded-lg ring-2 ring-gold/70 shadow-glow' : ''}>
+                    <CardStack count={view.stockCount} size={cardSize} disabled={!canDraw || busy} onClick={() => send({ type: 'DRAW_STOCK' })} />
+                  </div>
+                  <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80 lg:text-xs">Stock · {view.stockCount}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <button type="button" disabled={!canDraw || !topDiscard || busy} onClick={() => send({ type: 'DRAW_DISCARD' })} className={`rounded-lg disabled:opacity-90 ${canDraw && topDiscard && !busy ? 'ring-2 ring-gold/70 shadow-glow' : ''}`}>
+                    {topDiscard ? <CardView card={topDiscard} ruleSet={rs} size={cardSize} /> : <div className={`rounded-lg border border-dashed border-white/30 ${desktop ? 'h-[108px] w-[76px]' : 'h-[86px] w-[60px]'}`} />}
+                  </button>
+                  <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80 lg:text-xs">Discard · {view.discard.length}</span>
+                </div>
+              </div>
+
+              {me && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-3">
+                  <Seat player={me} active={myTurn} isDealer={me.seat === view.dealerSeat} isMe deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact={!desktop} wentOut={view.wentOutSeat === me.seat} />
+                </div>
+              )}
+            </Felt>
           </div>
-        )}
 
-        <details className="mx-3 my-2 text-xs text-white/40">
-          <summary className="cursor-pointer">Table log</summary>
-          <ul className="mt-1 space-y-0.5">
-            {view.log.slice().reverse().map((l, i) => <li key={i}>{l}</li>)}
-          </ul>
-        </details>
-      </main>
+          <div className="mx-3 mt-2 lg:mx-8 lg:mt-0">{buyBar}</div>
+
+          {/* Mobile: melds inline */}
+          <div className="px-3 pt-2 lg:hidden">
+            <div className="label mb-1.5">On the table</div>
+            {meldsPanel}
+            {stagedPanel}
+            <div className="my-2">{logPanel}</div>
+          </div>
+        </main>
+
+        {/* Desktop: side panel */}
+        <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-l border-line bg-ink-2/60 p-4 lg:flex">
+          <div className="label">On the table</div>
+          {meldsPanel}
+          {stagedPanel}
+          <div className="mt-auto">{logPanel}</div>
+        </aside>
+      </div>
 
       {/* Hand tray */}
       <footer className="safe-bottom border-t border-line bg-[linear-gradient(180deg,#11161e_0%,#0b0e13_100%)]">
-        <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60">
-          <span>
-            <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
-          </span>
-          {selected.size > 0 ? (
-            <button onClick={clearSelection} className="text-gold underline">clear {selected.size}</button>
-          ) : (
-            me && <span>{me.buysLeft} buy{me.buysLeft === 1 ? '' : 's'} left</span>
-          )}
-        </div>
-        <div className="no-scrollbar flex items-center gap-1.5 overflow-x-auto px-3 pt-2">
-          <span className="label mr-1 shrink-0">Arrange</span>
-          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={autoGroup}>✨ Group</button>
-          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('suit')}>♠ Suit</button>
-          <button className="shrink-0 rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('rank')}>7 Rank</button>
-          <span className="mx-1 h-5 w-px shrink-0 bg-line" />
-          <button className="shrink-0 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(-1)} aria-label="Move selected left">◀ Move</button>
-          <button className="shrink-0 rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(1)} aria-label="Move selected right">Move ▶</button>
-        </div>
-        <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-2">
-          {canPlay && !me?.hasLaidDown && (
-            <>
-              <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>Group ({selected.size})</Button>
-              <Button size="sm" variant="outline" disabled={busy} onClick={autoArrange}>✨ Auto</Button>
-              <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>Lay down</Button>
-            </>
-          )}
-          {canPlay && me?.hasLaidDown && rs.layOff !== 'never' && (
-            <Button size="sm" variant="outline" disabled={busy} onClick={autoLayOff}>✨ Auto lay off</Button>
-          )}
-          {canPlay && mode.kind === 'replace' && (
-            <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>Cancel replace</Button>
-          )}
-          {canPlay && !contract.noDiscard && (
-            <Button size="sm" variant="danger" disabled={selected.size !== 1 || busy} onClick={discard}>
-              Discard {selectedCards.length === 1 ? cardLabel(selectedCards[0]) : ''}
-            </Button>
-          )}
-          {canPlay && contract.noDiscard && (
-            <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>End turn</Button>
-          )}
-          {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-xs text-white/40">Waiting for {current?.name}…</span>}
+        <div className="mx-auto max-w-[1400px]">
+          <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60 lg:px-8 lg:text-sm">
+            <span>
+              <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="label mr-1 hidden lg:inline">Arrange</span>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={autoGroup}>✨ Group</button>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('suit')}>♠ Suit</button>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('rank')}>7 Rank</button>
+              <span className="mx-1 h-5 w-px bg-line" />
+              <button className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(-1)} aria-label="Move selected left">◀ Move</button>
+              <button className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(1)} aria-label="Move selected right">Move ▶</button>
+              {selected.size > 0 && <button onClick={clearSelection} className="ml-1 text-gold underline">clear {selected.size}</button>}
+            </div>
+          </div>
+          <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} size={cardSize} />
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-3 lg:justify-center">
+            {canPlay && !me?.hasLaidDown && (
+              <>
+                <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>Group ({selected.size}) for lay-down</Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={autoArrange}>✨ Find contract</Button>
+                <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>Lay down</Button>
+              </>
+            )}
+            {canPlay && me?.hasLaidDown && rs.layOff !== 'never' && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={autoLayOff}>✨ Auto lay off</Button>
+            )}
+            {canPlay && mode.kind === 'replace' && (
+              <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>Cancel replace</Button>
+            )}
+            {canPlay && !contract.noDiscard && (
+              <Button size="sm" variant="danger" disabled={selected.size !== 1 || busy} onClick={discard}>
+                Discard {selectedCards.length === 1 ? cardLabel(selectedCards[0]) : ''}
+              </Button>
+            )}
+            {canPlay && contract.noDiscard && (
+              <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>End turn</Button>
+            )}
+            {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-xs text-white/40">Waiting for {current?.name}…</span>}
+          </div>
         </div>
       </footer>
     </div>
