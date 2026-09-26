@@ -48,8 +48,8 @@ const session = { access_token: token, refresh_token: 'r', token_type: 'bearer',
 
 const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const errors = [];
-async function run(state, label, checks) {
-  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+async function run(state, label, checks, desktop = false) {
+  const ctx = await browser.newContext(desktop ? { viewport: { width: 1440, height: 900 } } : { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await ctx.newPage();
   page.on('console', (m) => { if (m.type() === 'error' && !m.text().includes('WebSocket')) errors.push(`[${label}] ${m.text()}`); });
   page.on('pageerror', (e) => errors.push(`[${label}] pageerror ${e.message}`));
@@ -70,7 +70,8 @@ async function run(state, label, checks) {
   await page.waitForTimeout(1500);
   const text = await page.innerText('body');
   for (const c of checks) if (!text.toLowerCase().includes(c.toLowerCase())) errors.push(`[${label}] missing text: ${c}`);
-  await page.screenshot({ path: `${process.argv[3]}/${label}.png`, fullPage: true });
+  await page.screenshot({ path: `${process.argv[3]}/${label}.png` });
+  await page.screenshot({ path: `${process.argv[3]}/${label}-full.png`, fullPage: true });
   return { page, ctx, text };
 }
 const l = await run(lobby, 'lobby', ['Lobby', 'ABC123', 'Bob', 'Cat', 'Start game']);
@@ -80,8 +81,35 @@ const t = await run(playing, 'table', ['Round 1/7', 'two sets of 3', 'Your turn'
 await t.page.locator('[data-card]').first().tap();
 await t.page.waitForTimeout(300);
 if (!(await t.page.innerText('body')).includes('clear 1')) errors.push('[table] tap-select did not select a card');
-await t.page.screenshot({ path: `${process.argv[3]}/table-selected.png`, fullPage: true });
+await t.page.screenshot({ path: `${process.argv[3]}/table-selected.png` });
+// Arrange controls: nudge the selected card right, then auto-group, then sort by suit.
+const firstId = await t.page.locator('[data-card]').first().evaluate((el) => el.querySelector('button')?.textContent);
+await t.page.getByRole('button', { name: 'Move selected right' }).tap();
+await t.page.waitForTimeout(200);
+const secondId = await t.page.locator('[data-card]').nth(1).evaluate((el) => el.querySelector('button')?.textContent);
+if (firstId !== secondId) errors.push('[table] nudge right did not move the selected card');
+await t.page.getByRole('button', { name: '✨ Group' }).tap();
+await t.page.waitForTimeout(200);
+await t.page.getByRole('button', { name: '♠ Suit' }).tap();
+await t.page.waitForTimeout(300);
+await t.page.screenshot({ path: `${process.argv[3]}/table-sorted.png` });
 await t.ctx.close();
+// Desktop views
+for (const [st, label] of [[lobby, 'lobby-desktop'], [playing, 'table-desktop']]) {
+  const d = await run(st, label, [], true);
+  await d.ctx.close();
+}
+{
+  const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(`[home-desktop] pageerror ${e.message}`));
+  await page.route('http://fake.supabase.local/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.addInitScript((sess) => { localStorage.setItem('sb-fake-auth-token', JSON.stringify(sess)); }, session);
+  await page.goto('http://localhost:4173/');
+  await page.waitForTimeout(1000);
+  await page.screenshot({ path: `${process.argv[3]}/home-desktop.png` });
+  await ctx.close();
+}
 // Home screen
 const h = await (async () => {
   const ctx = await browser.newContext({ viewport: { width: 390, height: 844 } });
@@ -96,6 +124,16 @@ const h = await (async () => {
   await page.screenshot({ path: `${process.argv[3]}/setup.png`, fullPage: true });
   await ctx.close();
 })();
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  page.on('pageerror', (e) => errors.push(`[auth] pageerror ${e.message}`));
+  await page.route('http://fake.supabase.local/**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: '[]' }));
+  await page.goto('http://localhost:4173/');
+  await page.waitForTimeout(1200);
+  await page.screenshot({ path: `${process.argv[3]}/auth.png` });
+  await ctx.close();
+}
 await browser.close();
 server.close();
 console.log(errors.length ? 'ERRORS:\n' + errors.join('\n') : 'SMOKE OK');

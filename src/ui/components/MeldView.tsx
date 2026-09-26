@@ -14,28 +14,25 @@ interface Props {
 }
 
 export function MeldView({ meld, ruleSet, ownerName, highlight, onTap, onTapCard }: Props) {
+  const red = meld.kind === 'run' && (meld.suit === 'H' || meld.suit === 'D');
   return (
     <div
-      className={`rounded-lg border p-1.5 ${highlight ? 'border-sky-400 bg-sky-400/10' : 'border-white/10 bg-black/20'} ${onTap ? 'cursor-pointer active:bg-white/10' : ''}`}
+      className={`shrink-0 rounded-xl border p-2 transition ${highlight ? 'border-gold bg-gold/10 shadow-glow' : 'border-white/10 bg-black/30'} ${onTap ? 'cursor-pointer active:bg-white/10' : ''}`}
       onClick={onTap}
     >
-      <div className="mb-1 flex items-center justify-between text-[10px] uppercase tracking-wide text-white/60">
-        <span>{meld.kind === 'set' ? `Set of ${meld.rank}s` : `Run ${SUIT[meld.suit]}`}</span>
-        <span>{ownerName}</span>
+      <div className="mb-1.5 flex items-center justify-between gap-3 text-[10px] font-semibold uppercase tracking-wider text-white/60">
+        <span>
+          {meld.kind === 'set' ? `${meld.rank}s` : <span className={red ? 'text-red-400' : ''}>run {SUIT[meld.suit]}</span>}
+        </span>
+        <span className="truncate text-white/40">{ownerName}</span>
       </div>
       <div className="flex">
         {meld.cards.map((c, i) => {
           const wild = isWild(c, ruleSet);
           const standsFor = meld.kind === 'run' && wild ? runCardValue(meld, i).rank : undefined;
           return (
-            <div key={c.id} className="-ml-3 first:ml-0">
-              <CardView
-                card={c}
-                ruleSet={ruleSet}
-                small
-                standsFor={standsFor}
-                onClick={onTapCard ? (e) => { e.stopPropagation(); onTapCard(c.id); } : undefined}
-              />
+            <div key={c.id} className="-ml-4 first:ml-0" style={{ zIndex: i }}>
+              <CardView card={c} ruleSet={ruleSet} size="sm" standsFor={standsFor} onClick={onTapCard ? (e) => { e.stopPropagation(); onTapCard(c.id); } : undefined} />
             </div>
           );
         })}

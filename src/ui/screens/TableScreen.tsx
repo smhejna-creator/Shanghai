@@ -1,19 +1,23 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import type { Card, Meld } from '@/engine/index.ts';
-import { cardLabel, eligibleBuyers, findContractMelds, findLayOffs, handScore, isWild } from '@/engine/index.ts';
+import { cardLabel, eligibleBuyers, findContractMelds, findLayOffs, handScore, isWild, rankValue, type Rank } from '@/engine/index.ts';
 import type { GameData } from '@/lib/supabase/useGame';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
-import { CardView } from '../components/CardView';
+import { CardStack, CardView } from '../components/CardView';
 import { Countdown } from '../components/Countdown';
+import { Felt, seatPosition, useIsDesktop } from '../components/Felt';
+import { Logo } from '../components/Logo';
 import { Hand } from '../components/Hand';
 import { MeldView } from '../components/MeldView';
+import { Seat } from '../components/Seat';
 
-type Mode = { kind: 'idle' } | { kind: 'layoff' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
+type Mode = { kind: 'idle' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
 
 export function TableScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet: rs } = game;
+  const desktop = useIsDesktop();
   const me = view.players.find((p) => p.userId === user.id);
   const mySeat = me?.seat ?? -1;
   const myTurn = view.currentSeat === mySeat;
@@ -25,8 +29,19 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const hand = view.myHand;
   const handById = useMemo(() => new Map(hand.map((c) => [c.id, c])), [hand]);
   const reorderTimer = useRef<number>();
+  const [order, setOrder] = useState<string[]>(() => hand.map((c) => c.id));
 
-  // Drop selections for cards that left the hand.
+  // Keep the player's arrangement; new cards go on the right.
+  useEffect(() => {
+    setOrder((prev) => {
+      const kept = prev.filter((id) => handById.has(id));
+      const added = hand.map((c) => c.id).filter((id) => !kept.includes(id));
+      const next = [...kept, ...added];
+      return next.length === prev.length && next.every((id, i) => id === prev[i]) ? prev : next;
+    });
+  }, [hand, handById]);
+  const orderedHand = useMemo(() => order.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)), [order, handById]);
+
   useEffect(() => {
     setSelected((s) => new Set([...s].filter((id) => handById.has(id))));
     setGroups((g) => g.map((grp) => grp.filter((id) => handById.has(id))).filter((grp) => grp.length > 0));
@@ -61,7 +76,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const clearSelection = () => setSelected(new Set());
   const selectedCards = hand.filter((c) => selected.has(c.id));
   const stagedIds = useMemo(() => new Set(groups.flat()), [groups]);
-  const unstagedHand = useMemo(() => hand.filter((c) => !stagedIds.has(c.id)), [hand, stagedIds]);
+  const unstagedHand = useMemo(() => orderedHand.filter((c) => !stagedIds.has(c.id)), [orderedHand, stagedIds]);
 
   const canDraw = myTurn && (view.phase === 'turn.draw' || view.phase === 'buy.window');
   const canPlay = myTurn && view.phase === 'turn.play';
@@ -70,7 +85,6 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
   const iHoldPriority = view.buyWindow && view.buyWindow.order[view.buyWindow.index] === mySeat;
   const iClaimed = view.buyWindow?.claims.includes(mySeat);
 
-  // ---- actions ----
   const stageGroup = () => {
     if (selectedCards.length === 0) return;
     setGroups((g) => [...g, selectedCards.map((c) => c.id)]);
@@ -111,6 +125,17 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
       }
     }, clearSelection);
   };
+  const tapMeld = (meld: Meld) => {
+    if (!canPlay) return;
+    if (mode.kind === 'replace') {
+      send({ type: 'REPLACE_WILD', meldId: mode.meldId, wildCardId: mode.wildCardId, naturalCardId: mode.naturalCardId, playTo: { meldId: meld.id } }, () => {
+        clearSelection();
+        setMode({ kind: 'idle' });
+      });
+      return;
+    }
+    if (me?.hasLaidDown && selectedCards.length > 0) layOffTo(meld);
+  };
   const tapMeldCard = (meld: Meld, cardId: string) => {
     if (!canPlay || !me?.hasLaidDown) return;
     if (mode.kind === 'replace') {
@@ -124,207 +149,263 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     }
     layOffTo(meld);
   };
-  const tapMeld = (meld: Meld) => {
-    if (!canPlay) return;
-    if (mode.kind === 'replace') {
-      send({ type: 'REPLACE_WILD', meldId: mode.meldId, wildCardId: mode.wildCardId, naturalCardId: mode.naturalCardId, playTo: { meldId: meld.id } }, () => {
-        clearSelection();
-        setMode({ kind: 'idle' });
-      });
-      return;
-    }
-    if (me?.hasLaidDown && selectedCards.length > 0) layOffTo(meld);
-  };
-  const onReorder = (ids: string[]) => {
-    window.clearTimeout(reorderTimer.current);
+  /** Apply a new order for the unstaged cards; staged cards keep their place at the end. Persists after a short delay. */
+  const applyOrder = (ids: string[]) => {
     const full = [...ids, ...groups.flat().filter((id) => handById.has(id))];
+    setOrder(full);
+    window.clearTimeout(reorderTimer.current);
     reorderTimer.current = window.setTimeout(() => api.action(gameId, { type: 'REORDER_HAND', cardIds: full }).catch(() => {}), 600);
+  };
+  const onReorder = (ids: string[]) => applyOrder(ids);
+  const value = (c: Card) => (isWild(c, rs) ? 99 : rankValue(c.rank as Rank, rs.acesHighLow === 'high' ? 14 : 1));
+  const suitOrder = (c: Card) => (isWild(c, rs) ? 9 : 'SHDC'.indexOf(c.suit));
+  const sortHand = (by: 'rank' | 'suit') => {
+    const sorted = unstagedHand.slice().sort((a, b) => (by === 'rank' ? value(a) - value(b) || suitOrder(a) - suitOrder(b) : suitOrder(a) - suitOrder(b) || value(a) - value(b)));
+    applyOrder(sorted.map((c) => c.id));
+  };
+  /** Move the selected cards one step left or right, keeping them together. */
+  const nudge = (dir: -1 | 1) => {
+    const ids = unstagedHand.map((c) => c.id);
+    const sel = ids.filter((id) => selected.has(id));
+    if (sel.length === 0) return;
+    const rest = ids.filter((id) => !selected.has(id));
+    const first = ids.indexOf(sel[0]);
+    const last = ids.indexOf(sel[sel.length - 1]);
+    // Insert position in `rest`: number of unselected cards before the block, shifted by one.
+    let pos = ids.slice(0, first).filter((id) => !selected.has(id)).length;
+    if (dir > 0) {
+      const after = ids.slice(last + 1).filter((id) => !selected.has(id));
+      if (after.length === 0) return;
+      pos += 1;
+    } else {
+      if (pos === 0) return;
+      pos -= 1;
+    }
+    const next = [...rest.slice(0, pos), ...sel, ...rest.slice(pos)];
+    applyOrder(next);
+  };
+  /** Order the hand so cards that make sets or runs sit together. */
+  const autoGroup = () => {
+    const cards = unstagedHand.slice();
+    const used = new Set<string>();
+    const groupsOut: Card[][] = [];
+    // Sets of 2+ by rank
+    const byRank = new Map<string, Card[]>();
+    for (const c of cards) if (!isWild(c, rs)) byRank.set(c.rank, [...(byRank.get(c.rank) ?? []), c]);
+    for (const list of byRank.values()) if (list.length >= 2) { groupsOut.push(list); list.forEach((c) => used.add(c.id)); }
+    // Runs of 2+ by suit among the rest
+    for (const suit of ['S', 'H', 'D', 'C']) {
+      const list = cards.filter((c) => !used.has(c.id) && !isWild(c, rs) && c.suit === suit).sort((a, b) => value(a) - value(b));
+      let run: Card[] = [];
+      const flush = () => { if (run.length >= 2) { groupsOut.push(run); run.forEach((c) => used.add(c.id)); } run = []; };
+      for (const c of list) {
+        if (run.length && value(c) - value(run[run.length - 1]) > 2) flush();
+        if (!run.length || value(c) !== value(run[run.length - 1])) run.push(c);
+      }
+      flush();
+    }
+    const wilds = cards.filter((c) => isWild(c, rs));
+    const loose = cards.filter((c) => !used.has(c.id) && !isWild(c, rs)).sort((a, b) => value(a) - value(b));
+    applyOrder([...groupsOut.flat(), ...loose, ...wilds].map((c) => c.id));
   };
 
   const topDiscard = view.discard[view.discard.length - 1];
-  const others = view.players;
+  const others = view.players.filter((p) => p.seat !== mySeat);
+  const current = view.players[view.currentSeat];
+  const bw = view.buyWindow;
+  const priorityName = bw ? view.players[bw.order[bw.index]]?.name : undefined;
+
+  const status = (() => {
+    if (view.phase === 'buy.window' && bw) {
+      if (canBuy) return iHoldPriority ? 'You have first claim on the discard.' : `${priorityName} has priority. Claim to buy if they pass.`;
+      if (myTurn) return `Buy window open. ${priorityName} deciding… draw from stock to end it.`;
+      return `${priorityName} deciding whether to buy…`;
+    }
+    if (view.phase === 'turn.draw') return myTurn ? 'Draw from the stock or take the discard.' : `${current?.name} is drawing…`;
+    if (view.phase === 'turn.play') {
+      if (!myTurn) return `${current?.name} is playing…`;
+      if (mode.kind === 'replace') return 'Tap the meld where the freed wild should go.';
+      return me?.hasLaidDown ? 'Select cards, then tap a meld to lay off.' : 'Build your contract, then discard.';
+    }
+    return '';
+  })();
+
+  const cardSize = desktop ? 'lg' : 'md';
+  const meldsPanel = (
+    <>
+      {view.melds.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-white/15 py-4 text-center text-xs text-white/40">No melds on the table yet</p>
+      ) : (
+        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+          {view.melds.map((m) => (
+            <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={view.players[m.ownerSeat]?.name ?? ''} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
+          ))}
+        </div>
+      )}
+    </>
+  );
+  const stagedPanel = groups.length > 0 && (
+    <div className="mt-2 rounded-xl border border-gold/40 bg-gold/10 p-2 animate-rise">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="label !text-gold">Ready to lay down · {groups.length}/{contract.melds.length}</span>
+        <button className="text-xs text-white/60 underline" onClick={() => setGroups([])}>clear</button>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {groups.map((g, gi) => (
+          <button key={gi} className="flex rounded-lg bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
+            {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c, i) => (
+              <div key={c.id} className="-ml-4 first:ml-0" style={{ zIndex: i }}>
+                <CardView card={c} ruleSet={rs} size="sm" />
+              </div>
+            ))}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+  const buyBar = view.phase === 'buy.window' && bw ? (
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-gold/40 bg-gold/10 px-3 py-2 animate-rise">
+      <div>
+        <div className="label !text-gold">Buy window · <Countdown deadline={bw.deadline} /></div>
+        <div className="text-xs text-white/80">{status}</div>
+      </div>
+      {canBuy && (
+        <div className="flex shrink-0 gap-2">
+          <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
+            {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
+          </Button>
+          <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>Pass</Button>
+        </div>
+      )}
+    </div>
+  ) : (
+    <p className="py-1 text-center text-xs text-white/60 lg:text-sm">{status}</p>
+  );
+  const logPanel = (
+    <details className="text-xs text-white/40 lg:open:text-white/60" open={desktop}>
+      <summary className="label cursor-pointer">Table log</summary>
+      <ul className="mt-1 max-h-48 space-y-0.5 overflow-y-auto">
+        {view.log.slice().reverse().map((l, i) => <li key={i}>{l}</li>)}
+      </ul>
+    </details>
+  );
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header: round + contract */}
-      <header className="flex items-center justify-between bg-black/30 px-3 py-2 text-sm">
-        <div>
-          <div className="text-[11px] uppercase tracking-wide text-white/60">
-            Round {view.roundIndex + 1}/{rs.rounds.length}
-            {contract.noDiscard && <span className="ml-2 rounded bg-red-500/40 px-1 text-[10px]">NO DISCARD</span>}
+      {/* Top bar */}
+      <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur lg:px-6">
+        <div className="hidden lg:block"><Logo size="sm" className="!items-start" /></div>
+        <div className="lg:text-center">
+          <div className="label">Round {view.roundIndex + 1} of {rs.rounds.length}</div>
+          <div className="font-display text-base font-bold capitalize text-white lg:text-xl">
+            {contract.name}
+            {contract.noDiscard && <span className="ml-2 rounded bg-red-500/30 px-1.5 align-middle text-[9px] font-bold uppercase tracking-wider text-red-200">no discard</span>}
           </div>
-          <div className="font-semibold capitalize">{contract.name}</div>
         </div>
         <div className="text-right">
-          <div className="text-[11px] uppercase tracking-wide text-white/60">{myTurn ? 'Your turn' : `${view.players[view.currentSeat]?.name}'s turn`}</div>
-          <Countdown deadline={view.phase === 'buy.window' ? view.buyWindow?.deadline : view.turnDeadline} className="text-lg font-bold" />
+          <div className={`label ${myTurn ? '!text-gold' : ''}`}>{myTurn ? 'Your turn' : `${current?.name}'s turn`}</div>
+          <Countdown deadline={view.phase === 'buy.window' ? bw?.deadline : view.turnDeadline} className="font-display text-xl font-bold lg:text-2xl" />
         </div>
       </header>
 
-      {/* Players strip */}
-      <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 py-2">
-        {others.map((p) => (
-          <div
-            key={p.seat}
-            className={`flex shrink-0 flex-col rounded-lg px-2 py-1 text-xs ${p.seat === view.currentSeat ? 'bg-amber-400 text-black' : 'bg-white/10'} ${!p.connected ? 'opacity-50' : ''}`}
-          >
-            <span className="font-semibold">
-              {p.seat === view.dealerSeat && '🂠 '}
-              {p.isBot && '🤖 '}
-              {p.name}
-              {p.seat === mySeat && ' (you)'}
-            </span>
-            <span className="opacity-80">
-              {p.handCount} cards · {p.buysLeft} buy{p.buysLeft === 1 ? '' : 's'}
-              {p.hasLaidDown && ' · ✓ down'}
-            </span>
+      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+        <main className="min-h-0 flex-1 overflow-y-auto lg:flex lg:flex-col lg:overflow-hidden">
+          {/* The table */}
+          <div className="px-2 pt-2 lg:flex lg:flex-1 lg:items-center lg:justify-center lg:px-8 lg:py-4">
+            <Felt className="h-[330px] lg:h-[min(60vh,600px)] lg:max-w-[1100px]">
+              {others.map((p, i) => (
+                <div key={p.seat} className="absolute -translate-x-1/2 -translate-y-1/2" style={seatPosition(i, others.length, desktop ? 'ring' : 'arc')}>
+                  <Seat player={p} active={p.seat === view.currentSeat} isDealer={p.seat === view.dealerSeat} isMe={false} deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact={!desktop} wentOut={view.wentOutSeat === p.seat} />
+                </div>
+              ))}
+
+              {/* Center: piles */}
+              <div className="absolute left-1/2 top-[51%] flex -translate-x-1/2 -translate-y-1/2 items-end gap-5 lg:top-1/2 lg:gap-8">
+                <div className="flex flex-col items-center gap-1">
+                  <div className={canDraw && !busy ? 'rounded-lg ring-2 ring-gold/70 shadow-glow' : ''}>
+                    <CardStack count={view.stockCount} size={cardSize} disabled={!canDraw || busy} onClick={() => send({ type: 'DRAW_STOCK' })} />
+                  </div>
+                  <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80 lg:text-xs">Stock · {view.stockCount}</span>
+                </div>
+                <div className="flex flex-col items-center gap-1">
+                  <button type="button" disabled={!canDraw || !topDiscard || busy} onClick={() => send({ type: 'DRAW_DISCARD' })} className={`rounded-lg disabled:opacity-90 ${canDraw && topDiscard && !busy ? 'ring-2 ring-gold/70 shadow-glow' : ''}`}>
+                    {topDiscard ? <CardView card={topDiscard} ruleSet={rs} size={cardSize} /> : <div className={`rounded-lg border border-dashed border-white/30 ${desktop ? 'h-[108px] w-[76px]' : 'h-[86px] w-[60px]'}`} />}
+                  </button>
+                  <span className="rounded-full bg-black/40 px-2 text-[10px] font-semibold text-white/80 lg:text-xs">Discard · {view.discard.length}</span>
+                </div>
+              </div>
+
+              {me && (
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 lg:bottom-3">
+                  <Seat player={me} active={myTurn} isDealer={me.seat === view.dealerSeat} isMe deadline={view.turnDeadline} totalSeconds={rs.turnTimerSeconds} compact={!desktop} wentOut={view.wentOutSeat === me.seat} />
+                </div>
+              )}
+            </Felt>
           </div>
-        ))}
+
+          <div className="mx-3 mt-2 lg:mx-8 lg:mt-0">{buyBar}</div>
+
+          {/* Mobile: melds inline */}
+          <div className="px-3 pt-2 lg:hidden">
+            <div className="label mb-1.5">On the table</div>
+            {meldsPanel}
+            {stagedPanel}
+            <div className="my-2">{logPanel}</div>
+          </div>
+        </main>
+
+        {/* Desktop: side panel */}
+        <aside className="hidden w-80 shrink-0 flex-col gap-3 overflow-y-auto border-l border-line bg-ink-2/60 p-4 lg:flex">
+          <div className="label">On the table</div>
+          {meldsPanel}
+          {stagedPanel}
+          <div className="mt-auto">{logPanel}</div>
+        </aside>
       </div>
 
-      {/* Table: melds + piles */}
-      <main className="flex-1 overflow-y-auto px-3 pb-2">
-        <div className="mb-3 flex items-center gap-4 rounded-xl bg-black/20 p-3">
-          <button
-            className="flex flex-col items-center gap-1 disabled:opacity-60"
-            disabled={!canDraw || busy}
-            onClick={() => send({ type: 'DRAW_STOCK' })}
-          >
-            <CardView card={{ id: 'stock', rank: 'A', suit: 'S', deck: 0 }} ruleSet={rs} faceDown />
-            <span className="text-xs text-white/70">Stock · {view.stockCount}</span>
-          </button>
-          <button
-            className="flex flex-col items-center gap-1 disabled:opacity-60"
-            disabled={!canDraw || !topDiscard || busy}
-            onClick={() => send({ type: 'DRAW_DISCARD' })}
-          >
-            {topDiscard ? <CardView card={topDiscard} ruleSet={rs} /> : <div className="h-20 w-14 rounded-md border border-dashed border-white/30" />}
-            <span className="text-xs text-white/70">Discard · {view.discard.length}</span>
-          </button>
-          <div className="flex-1 text-sm">
-            {view.phase === 'buy.window' && view.buyWindow && (
-              <div className="rounded-lg bg-white/10 p-2">
-                <div className="text-xs uppercase text-white/60">Buy window</div>
-                <div>
-                  {view.players[view.buyWindow.order[view.buyWindow.index]]?.name} has priority <Countdown deadline={view.buyWindow.deadline} />
-                </div>
-                {canBuy && (
-                  <div className="mt-2 flex gap-2">
-                    <Button size="sm" disabled={busy || iClaimed} onClick={() => send({ type: 'BUY' })}>
-                      {iClaimed ? 'Claimed' : iHoldPriority ? 'Buy now' : 'Buy if free'}
-                    </Button>
-                    <Button size="sm" variant="secondary" disabled={busy} onClick={() => send({ type: 'PASS_BUY' })}>
-                      Pass
-                    </Button>
-                  </div>
-                )}
-                {myTurn && <div className="mt-1 text-xs text-white/60">Drawing from stock ends the window.</div>}
-              </div>
-            )}
-            {view.phase === 'turn.draw' && myTurn && <div className="text-white/80">Draw from the stock or take the discard.</div>}
-            {view.phase === 'turn.play' && myTurn && (
-              <div className="text-white/80">
-                {mode.kind === 'replace' ? 'Tap the meld where the freed wild should go.' : me?.hasLaidDown ? 'Select cards, then tap a meld to lay off.' : 'Build your contract, then discard.'}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {view.melds.length === 0 && <p className="py-4 text-center text-sm text-white/50">No melds on the table yet.</p>}
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-          {view.melds.map((m) => (
-            <MeldView
-              key={m.id}
-              meld={m}
-              ruleSet={rs}
-              ownerName={view.players[m.ownerSeat]?.name ?? ''}
-              highlight={mode.kind === 'replace' && mode.meldId === m.id}
-              onTap={canPlay ? () => tapMeld(m) : undefined}
-              onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined}
-            />
-          ))}
-        </div>
-
-        {/* Staged lay-down groups */}
-        {groups.length > 0 && (
-          <div className="mt-3 rounded-xl bg-sky-400/10 p-2">
-            <div className="mb-1 flex items-center justify-between text-xs uppercase text-white/60">
-              <span>Ready to lay down ({groups.length}/{contract.melds.length})</span>
-              <button onClick={() => setGroups([])}>clear</button>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {groups.map((g, gi) => (
-                <button key={gi} className="flex rounded bg-black/30 p-1" onClick={() => setGroups((x) => x.filter((_, i) => i !== gi))} title="Remove group">
-                  {g.map((id) => handById.get(id)).filter((c): c is Card => Boolean(c)).map((c) => (
-                    <div key={c.id} className="-ml-3 first:ml-0">
-                      <CardView card={c} ruleSet={rs} small />
-                    </div>
-                  ))}
-                </button>
-              ))}
+      {/* Hand tray */}
+      <footer className="safe-bottom border-t border-line bg-[linear-gradient(180deg,#11161e_0%,#0b0e13_100%)]">
+        <div className="mx-auto max-w-[1400px]">
+          <div className="flex items-center justify-between px-4 pt-2 text-[11px] text-white/60 lg:px-8 lg:text-sm">
+            <span>
+              <span className="font-semibold text-white/80">Your hand</span> · {hand.length} cards · <span className="tabular-nums">{handScore(hand, rs)}</span> pts
+            </span>
+            <div className="flex items-center gap-1.5">
+              <span className="label mr-1 hidden lg:inline">Arrange</span>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={autoGroup}>✨ Group</button>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('suit')}>♠ Suit</button>
+              <button className="rounded-lg border border-line bg-ink-4 px-2.5 py-1 text-xs font-semibold text-white/80 active:bg-ink-3" onClick={() => sortHand('rank')}>7 Rank</button>
+              <span className="mx-1 h-5 w-px bg-line" />
+              <button className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(-1)} aria-label="Move selected left">◀ Move</button>
+              <button className="rounded-lg border border-gold/40 bg-gold/10 px-3 py-1 text-xs font-bold text-gold disabled:opacity-30" disabled={selected.size === 0} onClick={() => nudge(1)} aria-label="Move selected right">Move ▶</button>
+              {selected.size > 0 && <button onClick={clearSelection} className="ml-1 text-gold underline">clear {selected.size}</button>}
             </div>
           </div>
-        )}
-
-        <details className="mt-3 text-xs text-white/50">
-          <summary>Log</summary>
-          <ul className="mt-1">
-            {view.log.slice().reverse().map((l, i) => (
-              <li key={i}>{l}</li>
-            ))}
-          </ul>
-        </details>
-      </main>
-
-      {/* Hand + action bar */}
-      <footer className="safe-bottom bg-black/40">
-        <div className="flex items-center justify-between px-3 pt-2 text-xs text-white/60">
-          <span>
-            Your hand · {hand.length} cards · {handScore(hand, rs)} pts
-            {me && ` · ${me.buysLeft} buys left`}
-          </span>
-          {selected.size > 0 && (
-            <button onClick={clearSelection} className="underline">
-              clear {selected.size}
-            </button>
-          )}
-        </div>
-        <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} />
-        <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-3">
-          {canPlay && !me?.hasLaidDown && (
-            <>
-              <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>
-                Group ({selected.size})
+          <Hand cards={unstagedHand} ruleSet={rs} selected={selected} onToggle={toggle} onReorder={onReorder} size={cardSize} />
+          <div className="no-scrollbar flex gap-2 overflow-x-auto px-3 pb-3 lg:justify-center">
+            {canPlay && !me?.hasLaidDown && (
+              <>
+                <Button size="sm" variant="secondary" disabled={selected.size === 0 || busy} onClick={stageGroup}>Group ({selected.size}) for lay-down</Button>
+                <Button size="sm" variant="outline" disabled={busy} onClick={autoArrange}>✨ Find contract</Button>
+                <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>Lay down</Button>
+              </>
+            )}
+            {canPlay && me?.hasLaidDown && rs.layOff !== 'never' && (
+              <Button size="sm" variant="outline" disabled={busy} onClick={autoLayOff}>✨ Auto lay off</Button>
+            )}
+            {canPlay && mode.kind === 'replace' && (
+              <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>Cancel replace</Button>
+            )}
+            {canPlay && !contract.noDiscard && (
+              <Button size="sm" variant="danger" disabled={selected.size !== 1 || busy} onClick={discard}>
+                Discard {selectedCards.length === 1 ? cardLabel(selectedCards[0]) : ''}
               </Button>
-              <Button size="sm" variant="secondary" disabled={busy} onClick={autoArrange}>
-                Auto
-              </Button>
-              <Button size="sm" disabled={groups.length !== contract.melds.length || busy} onClick={layDown}>
-                Lay down
-              </Button>
-            </>
-          )}
-          {canPlay && me?.hasLaidDown && rs.layOff !== 'never' && (
-            <Button size="sm" variant="secondary" disabled={busy} onClick={autoLayOff}>
-              Auto lay off
-            </Button>
-          )}
-          {canPlay && mode.kind === 'replace' && (
-            <Button size="sm" variant="ghost" onClick={() => setMode({ kind: 'idle' })}>
-              Cancel replace
-            </Button>
-          )}
-          {canPlay && !contract.noDiscard && (
-            <Button size="sm" variant="danger" disabled={selected.size !== 1 || busy} onClick={discard}>
-              Discard {selectedCards.length === 1 ? cardLabel(selectedCards[0]) : ''}
-            </Button>
-          )}
-          {canPlay && contract.noDiscard && (
-            <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>
-              End turn
-            </Button>
-          )}
-          {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-sm text-white/50">Waiting for {view.players[view.currentSeat]?.name}…</span>}
+            )}
+            {canPlay && contract.noDiscard && (
+              <Button size="sm" variant="danger" disabled={busy} onClick={() => send({ type: 'END_TURN' })}>End turn</Button>
+            )}
+            {!myTurn && view.phase !== 'buy.window' && <span className="py-2 text-xs text-white/40">Waiting for {current?.name}…</span>}
+          </div>
         </div>
       </footer>
     </div>

@@ -49,16 +49,16 @@ export function SetupScreen({ user }: { user: User }) {
   };
 
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6 lg:max-w-3xl lg:py-10">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-black text-amber-300">New game</h1>
+        <h1 className="font-display text-2xl font-bold gold-text">New game</h1>
         <Button variant="ghost" size="sm" onClick={() => nav('/')}>
           Cancel
         </Button>
       </header>
       <RuleSetEditor value={rs} onChange={setRs} saved={saved} onSave={(n) => save(n, rs)} onDeleteSaved={remove} />
       {error && <p className="text-sm text-red-300">{error}</p>}
-      <div className="safe-bottom sticky bottom-0 -mx-5 bg-felt-dark/95 px-5 py-3 backdrop-blur">
+      <div className="safe-bottom sticky bottom-0 -mx-5 bg-ink/95 px-5 py-3 backdrop-blur">
         <Button size="lg" onClick={create} disabled={busy || validateRuleSet(rs).length > 0} className="w-full">
           {busy ? 'Creating…' : 'Create game'}
         </Button>
@@ -73,9 +73,9 @@ export function RuleSetsScreen({ user }: { user: User }) {
   const [rs, setRs] = useState<RuleSet>(houseDefault);
   const { saved, save, remove } = useSavedRuleSets(user.id);
   return (
-    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6">
+    <div className="mx-auto flex max-w-md flex-col gap-4 px-5 py-6 lg:max-w-3xl lg:py-10">
       <header className="flex items-center justify-between">
-        <h1 className="text-2xl font-black text-amber-300">Saved rule sets</h1>
+        <h1 className="font-display text-2xl font-bold gold-text">Saved rule sets</h1>
         <Button variant="ghost" size="sm" onClick={() => nav('/')}>
           Done
         </Button>

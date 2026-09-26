@@ -1,19 +1,21 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost'; size?: 'sm' | 'md' | 'lg' };
+type Props = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' | 'ghost' | 'outline'; size?: 'sm' | 'md' | 'lg' };
 
 const styles = {
-  primary: 'bg-amber-400 text-black hover:bg-amber-300 disabled:bg-amber-400/40',
-  secondary: 'bg-white/15 text-white hover:bg-white/25 disabled:bg-white/5 disabled:text-white/40',
-  danger: 'bg-red-600 text-white hover:bg-red-500 disabled:bg-red-600/40',
-  ghost: 'bg-transparent text-white/80 hover:bg-white/10 disabled:text-white/30',
+  primary:
+    'text-ink font-bold bg-[linear-gradient(180deg,#f7d98a_0%,#e5b64a_50%,#c9962f_100%)] shadow-[0_1px_0_rgba(255,255,255,0.6)_inset,0_6px_16px_rgba(229,182,74,0.35)] hover:brightness-110 disabled:opacity-40 disabled:shadow-none',
+  secondary: 'bg-ink-4 text-white border border-line hover:bg-ink-3 hover:border-white/20 disabled:opacity-40',
+  outline: 'bg-transparent text-gold border border-gold/50 hover:bg-gold/10 disabled:opacity-40',
+  danger: 'bg-[linear-gradient(180deg,#e05252,#b32b2b)] text-white shadow-[0_6px_16px_rgba(199,59,59,0.35)] hover:brightness-110 disabled:opacity-40 disabled:shadow-none',
+  ghost: 'bg-transparent text-white/70 hover:bg-white/10 hover:text-white disabled:opacity-40',
 };
-const sizes = { sm: 'px-3 py-1.5 text-sm', md: 'px-4 py-2.5 text-base', lg: 'px-5 py-3 text-lg' };
+const sizes = { sm: 'h-9 px-3 text-sm', md: 'h-11 px-5 text-[15px]', lg: 'h-13 px-6 text-base py-3.5' };
 
 export function Button({ variant = 'primary', size = 'md', className = '', ...rest }: Props) {
   return (
     <button
-      className={`rounded-xl font-semibold shadow-sm transition active:scale-95 disabled:cursor-not-allowed disabled:active:scale-100 ${styles[variant]} ${sizes[size]} ${className}`}
+      className={`inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-semibold tracking-wide transition active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100 ${styles[variant]} ${sizes[size]} ${className}`}
       {...rest}
     />
   );

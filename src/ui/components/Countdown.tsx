@@ -8,5 +8,5 @@ export function Countdown({ deadline, className = '' }: { deadline?: number; cla
   }, []);
   if (!deadline) return null;
   const s = Math.max(0, Math.ceil((deadline - now) / 1000));
-  return <span className={`tabular-nums ${s <= 10 ? 'text-red-400' : ''} ${className}`}>{s}s</span>;
+  return <span className={`tabular-nums ${s <= 10 ? 'text-red-400' : 'text-gold'} ${className}`}>{s}s</span>;
 }

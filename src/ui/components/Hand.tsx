@@ -1,34 +1,36 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Card, RuleSet } from '@/engine/index.ts';
+import { isWild, rankValue, type Rank } from '@/engine/index.ts';
 import { CardView } from './CardView';
 
 interface Props {
+  /** Cards in display order (controlled by the parent). */
   cards: Card[];
   ruleSet: RuleSet;
   selected: Set<string>;
   onToggle: (id: string) => void;
   onReorder: (ids: string[]) => void;
+  size?: 'md' | 'lg';
 }
 
-/** Horizontal, scrollable fan. Tap selects; press-and-drag reorders. */
-export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
-  const [order, setOrder] = useState<string[]>(() => cards.map((c) => c.id));
-  const [drag, setDrag] = useState<{ id: string; x: number; over: number } | null>(null);
+/** Two neighbours "belong together" when they could share a set or a run. Used for visual gaps. */
+export function related(a: Card, b: Card, rs: RuleSet): boolean {
+  if (isWild(a, rs) || isWild(b, rs)) return true;
+  if (a.rank === b.rank) return true;
+  if (a.suit === b.suit) {
+    const d = Math.abs(rankValue(a.rank as Rank) - rankValue(b.rank as Rank));
+    return d <= 2 || d === 12; // A next to K counts too
+  }
+  return false;
+}
+
+/** Horizontal, scrollable fan. Tap selects; press-and-hold then drag reorders. */
+export function Hand({ cards, ruleSet, selected, onToggle, onReorder, size = 'md' }: Props) {
+  const [drag, setDrag] = useState<{ id: string; over: number } | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const start = useRef<{ id: string; x: number; y: number; moved: boolean; timer?: number; dragging: boolean } | null>(null);
-
-  // Merge server hand into local order (keeps the player's arrangement, appends new cards).
-  useEffect(() => {
-    const ids = new Set(cards.map((c) => c.id));
-    setOrder((prev) => {
-      const kept = prev.filter((id) => ids.has(id));
-      const added = cards.map((c) => c.id).filter((id) => !kept.includes(id));
-      const next = [...kept, ...added];
-      return next.length === prev.length && next.every((id, i) => id === prev[i]) ? prev : next;
-    });
-  }, [cards]);
-
   const dragging = useRef(false);
+
   useEffect(() => {
     const el = scroller.current;
     if (!el) return;
@@ -39,9 +41,7 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
     return () => el.removeEventListener('touchmove', block);
   }, []);
 
-  const byId = new Map(cards.map((c) => [c.id, c]));
-  const ordered = order.map((id) => byId.get(id)).filter((c): c is Card => Boolean(c));
-
+  const ids = cards.map((c) => c.id);
   const indexAt = (clientX: number) => {
     const el = scroller.current;
     if (!el) return 0;
@@ -59,78 +59,73 @@ export function Hand({ cards, ruleSet, selected, onToggle, onReorder }: Props) {
       if (start.current && !start.current.moved) {
         start.current.dragging = true;
         dragging.current = true;
-        setDrag({ id, x: e.clientX, over: order.indexOf(id) });
+        setDrag({ id, over: ids.indexOf(id) });
         if (navigator.vibrate) navigator.vibrate(10);
       }
-    }, 180);
+    }, 220);
     start.current.timer = timer;
   };
   const onPointerMove = (e: React.PointerEvent) => {
     const s = start.current;
     if (!s) return;
-    const dx = e.clientX - s.x;
-    const dy = e.clientY - s.y;
     if (!s.dragging) {
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8) {
+      if (Math.abs(e.clientX - s.x) > 8 || Math.abs(e.clientY - s.y) > 8) {
         s.moved = true;
         window.clearTimeout(s.timer);
       }
       return;
     }
     e.preventDefault();
-    setDrag({ id: s.id, x: e.clientX, over: indexAt(e.clientX) });
+    setDrag({ id: s.id, over: indexAt(e.clientX) });
   };
-  const onPointerUp = (e: React.PointerEvent) => {
+  const finish = (clientX?: number) => {
     const s = start.current;
     if (!s) return;
     window.clearTimeout(s.timer);
-    if (s.dragging) {
-      const from = order.indexOf(s.id);
-      const to = indexAt(e.clientX);
+    if (s.dragging && clientX !== undefined) {
+      const from = ids.indexOf(s.id);
+      const to = indexAt(clientX);
       if (from !== to) {
-        const next = order.slice();
+        const next = ids.slice();
         next.splice(from, 1);
         next.splice(to, 0, s.id);
-        setOrder(next);
         onReorder(next);
       }
-    } else if (!s.moved) {
+    } else if (!s.moved && !s.dragging) {
       onToggle(s.id);
     }
     start.current = null;
     dragging.current = false;
     setDrag(null);
   };
-  const onPointerCancel = () => {
-    if (start.current) window.clearTimeout(start.current.timer);
-    start.current = null;
-    dragging.current = false;
-    setDrag(null);
-  };
 
+  const n = cards.length;
   return (
     <div
       ref={scroller}
-      className="no-scrollbar flex touch-pan-x items-end gap-0 overflow-x-auto px-4 pb-2 pt-5"
-      style={{ touchAction: drag ? 'none' : 'pan-x' }}
+      className="no-scrollbar flex touch-pan-x select-none items-end overflow-x-auto px-5 pb-4 pt-6 lg:justify-center"
+      style={{ touchAction: drag ? 'none' : 'pan-x', WebkitTouchCallout: 'none', WebkitUserSelect: 'none' }}
       onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerCancel}
+      onPointerUp={(e) => finish(e.clientX)}
+      onPointerCancel={() => finish()}
+      onContextMenu={(e) => e.preventDefault()}
     >
-      {ordered.map((c, i) => (
-        <div
-          key={c.id}
-          data-card
-          onPointerDown={onPointerDown(c.id)}
-          className={`-ml-5 first:ml-0 transition-all ${drag?.id === c.id ? 'z-20 scale-110 opacity-70' : ''} ${
-            drag && drag.over === i && drag.id !== c.id ? 'ml-2' : ''
-          }`}
-          style={{ zIndex: drag?.id === c.id ? 30 : i }}
-        >
-          <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} />
-        </div>
-      ))}
-      {ordered.length === 0 && <div className="py-6 text-sm text-white/60">No cards in hand</div>}
+      {cards.map((c, i) => {
+        const tilt = n > 1 ? ((i - (n - 1) / 2) / (n - 1)) * 8 : 0;
+        const gap = i > 0 && !related(cards[i - 1], c, ruleSet);
+        return (
+          <div
+            key={c.id}
+            data-card
+            onPointerDown={onPointerDown(c.id)}
+            className={`transition-all ${i === 0 ? '' : gap ? 'ml-2' : size === 'lg' ? '-ml-7' : '-ml-6'} ${drag?.id === c.id ? 'z-20 scale-110 opacity-80' : ''} ${drag && drag.over === i && drag.id !== c.id ? '!ml-3' : ''}`}
+            style={{ zIndex: drag?.id === c.id ? 30 : i, transform: selected.has(c.id) ? undefined : `rotate(${tilt}deg) translateY(${Math.abs(tilt) * 0.3}px)` }}
+          >
+            <CardView card={c} ruleSet={ruleSet} selected={selected.has(c.id)} size={size} />
+          </div>
+        );
+      })}
+      {n === 0 && <div className="w-full py-6 text-center text-sm text-white/50">No cards in hand</div>}
     </div>
   );
 }
