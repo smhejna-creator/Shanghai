@@ -13,7 +13,8 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<HomeScreen user={user} signOut={signOut} />} />
-      <Route path="/new" element={<SetupScreen user={user} />} />
+      <Route path="/new" element={<Navigate to="/new/shanghai" replace />} />
+      <Route path="/new/:game" element={<SetupScreen user={user} />} />
       <Route path="/rulesets" element={<RuleSetsScreen user={user} />} />
       <Route path="/join/:code" element={<JoinScreen user={user} />} />
       <Route path="/g/:id" element={<GameScreen user={user} />} />
