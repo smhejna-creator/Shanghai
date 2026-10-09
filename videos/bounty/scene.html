@@ -1,0 +1,124 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#09090f;font-family:'DejaVu Sans',sans-serif}
+  #stage{position:relative;width:1080px;height:1920px;overflow:hidden;
+    background:radial-gradient(ellipse at 50% 40%,#1c1a2e 0%,#09090f 70%)}
+  .grid{position:absolute;inset:-200px;background-image:linear-gradient(rgba(255,180,40,.06) 2px,transparent 2px),
+    linear-gradient(90deg,rgba(255,180,40,.06) 2px,transparent 2px);background-size:90px 90px}
+  .t{position:absolute;left:0;width:100%;text-align:center;color:#fff;opacity:0}
+  .gold{color:#ffb428}
+  .big{font-weight:900;letter-spacing:-2px;text-transform:uppercase}
+  #nfl{top:620px;font-size:110px;letter-spacing:30px}
+  #bh{top:740px;font-size:150px;line-height:1.0}
+  #cross{position:absolute;left:290px;top:560px;width:500px;height:500px;opacity:0}
+  #kicker{top:1260px;font-size:34px;letter-spacing:8px;white-space:nowrap;color:#9a97b5}
+  .sec{top:430px;font-size:46px;letter-spacing:14px;color:#ffb428;font-weight:bold}
+  .head{top:520px;font-size:130px;font-weight:900;text-transform:uppercase;letter-spacing:-2px}
+  .line{top:1450px;font-size:58px;color:#e9e7f5}
+  #bid{top:820px;font-size:260px;font-weight:900;color:#ffb428;font-variant-numeric:tabular-nums}
+  #bidlbl{top:1130px;font-size:48px;color:#9a97b5;letter-spacing:6px}
+  #teams{position:absolute;left:130px;top:1200px;width:820px;display:grid;grid-template-columns:repeat(8,1fr);gap:14px}
+  #teams i{display:block;height:70px;border-radius:12px;background:#24223a;opacity:0}
+  #poster{position:absolute;left:240px;top:880px;width:600px;height:640px;border:8px solid #ffb428;border-radius:20px;
+    background:#14131f;opacity:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  #poster .w{font-size:120px;font-weight:900;color:#ffb428;letter-spacing:6px}
+  #poster .wk{font-size:50px;color:#e9e7f5;margin-top:20px}
+  #poster .amt{font-size:120px;font-weight:900;color:#fff;margin-top:20px}
+  #stamp{position:absolute;left:330px;top:1330px;font-size:110px;font-weight:900;color:#ff3b4e;border:10px solid #ff3b4e;
+    border-radius:16px;padding:6px 30px;opacity:0;transform-origin:center}
+  #board{position:absolute;left:150px;top:900px;width:780px}
+  .row{display:flex;justify-content:space-between;align-items:center;height:130px;margin-bottom:22px;border-radius:20px;
+    background:#1a1928;padding:0 40px;font-size:58px;color:#e9e7f5;opacity:0}
+  .row b{color:#ffb428}
+  .row.first{background:linear-gradient(90deg,#ffb428,#ff8a00);color:#09090f}
+  .row.first b{color:#09090f}
+  #end1{top:620px;font-size:84px;font-weight:900;line-height:1.15}
+  #end2{top:1000px;font-size:54px;color:#c9c6e0;line-height:1.35}
+  #url{top:1360px;left:50%;width:auto;font-size:56px;font-weight:bold;color:#09090f;background:#ffb428;padding:26px 56px;border-radius:80px;white-space:nowrap}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0}
+</style></head>
+<body><div id="stage">
+  <div class="grid" id="grid"></div>
+  <svg id="cross" viewBox="0 0 100 100" fill="none" stroke="#ffb428" stroke-width="1.6">
+    <circle cx="50" cy="50" r="40"/><circle cx="50" cy="50" r="22" stroke-width="1"/>
+    <line x1="50" y1="0" x2="50" y2="18"/><line x1="50" y1="82" x2="50" y2="100"/>
+    <line x1="0" y1="50" x2="18" y2="50"/><line x1="82" y1="50" x2="100" y2="50"/>
+  </svg>
+  <!-- Scene 1: title -->
+  <div id="nfl" class="t big">NFL</div>
+  <div id="bh" class="t big gold">Bounty<br>Hunters</div>
+  <div id="kicker" class="t">AUCTION · BOUNTIES · BRAGGING RIGHTS</div>
+  <!-- Scene 2: auction -->
+  <div id="s2a" class="t sec">01 · THE AUCTION</div>
+  <div id="s2b" class="t head">Bid on<br>all 32 teams</div>
+  <div id="bid" class="t">$0</div>
+  <div id="bidlbl" class="t">CURRENT BID</div>
+  <div id="teams"></div>
+  <!-- Scene 3: bounties -->
+  <div id="s3a" class="t sec">02 · THE BOUNTIES</div>
+  <div id="s3b" class="t head">Set weekly<br>bounties</div>
+  <div id="poster"><div class="w">WANTED</div><div class="wk">WEEK 6 BOUNTY</div><div class="amt">$50</div></div>
+  <div id="stamp">COLLECTED</div>
+  <!-- Scene 4: bragging rights -->
+  <div id="s4a" class="t sec">03 · BRAGGING RIGHTS</div>
+  <div id="s4b" class="t head">Win and<br>collect</div>
+  <div id="board">
+    <div class="row first"><span>1. You</span><b>$420</b></div>
+    <div class="row"><span>2. Mike</span><b>$310</b></div>
+    <div class="row"><span>3. Dana</span><b>$275</b></div>
+    <div class="row"><span>4. Chris</span><b>$190</b></div>
+  </div>
+  <!-- Scene 5: end card -->
+  <div id="end1" class="t">Built for friends<br>who take the game<br><span class="gold">seriously.</span></div>
+  <div id="end2" class="t">Start your league</div>
+  <div id="url" class="t">bountyleague.netlify.app</div>
+  <div id="flash"></div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+const teams=$('teams'); for(let i=0;i<32;i++) teams.appendChild(document.createElement('i'));
+const tiles=[...teams.children]; const rows=[...document.querySelectorAll('.row')];
+const clamp=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>(t-a)/(b-a);
+const ease=x=>1-Math.pow(1-clamp(x),3);
+const back=x=>{x=clamp(x);const c1=2.2,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
+// Show an element between [a,b] with fade/slide in and out.
+function show(el,t,a,b,{dy=60,scale=0,x=''}={}){
+  const i=ease(seg(t,a,a+.45)), o=1-ease(seg(t,b-.35,b));
+  el.style.opacity=Math.min(i,o);
+  const s=scale?(1+scale*(1-back(seg(t,a,a+.5)))):1;
+  el.style.transform=`${x} translateY(${(1-i)*dy}px) scale(${s})`;
+}
+window.render=function(t){
+  $('grid').style.transform=`translateY(${(t*40)%90}px)`;
+  // Scene 1 (0–2.8)
+  const c=$('cross'); c.style.opacity=Math.min(ease(seg(t,0,.5)),1-ease(seg(t,2.4,2.8)))*.9;
+  c.style.transform=`scale(${1.8-0.8*ease(seg(t,0,.9))}) rotate(${(1-ease(seg(t,0,1)))*-90}deg)`;
+  show($('nfl'),t,.5,2.8,{scale:.6}); show($('bh'),t,.7,2.8,{scale:.8});
+  show($('kicker'),t,1.3,2.8);
+  // Scene 2 (2.8–5.6)
+  show($('s2a'),t,2.9,5.6); show($('s2b'),t,3.0,5.6);
+  show($('bid'),t,3.3,5.6,{scale:.3}); show($('bidlbl'),t,3.4,5.6);
+  const amt=Math.round(5*Math.floor(ease(seg(t,3.3,5.0))*47)); $('bid').textContent='$'+amt;
+  tiles.forEach((el,i)=>{const k=ease(seg(t,3.4+i*.04,3.7+i*.04));const o=1-ease(seg(t,5.25,5.6));
+    el.style.opacity=Math.min(k,o); el.style.transform=`scale(${.4+.6*back(seg(t,3.4+i*.04,3.8+i*.04))})`;
+    el.style.background=(i===13&&t>4.6)?'#ffb428':'#24223a';});
+  // Scene 3 (5.6–8.4)
+  show($('s3a'),t,5.7,8.4); show($('s3b'),t,5.8,8.4); show($('poster'),t,6.0,8.4,{scale:.25});
+  const st=$('stamp'); const sk=seg(t,7.0,7.25);
+  st.style.opacity=t<7?0:Math.min(1,1-ease(seg(t,8.05,8.4)));
+  st.style.transform=`rotate(-14deg) scale(${t<7?3:3-2*ease(sk)})`;
+  // Scene 4 (8.4–11.2)
+  show($('s4a'),t,8.5,11.2); show($('s4b'),t,8.6,11.2);
+  rows.forEach((r,i)=>{const a=9.0+(3-i)*.18; const k=ease(seg(t,a,a+.4)); const o=1-ease(seg(t,10.85,11.2));
+    r.style.opacity=Math.min(k,o); r.style.transform=`translateX(${(1-k)*(i%2?-200:200)}px)`;});
+  // Scene 5 (11.2–14)
+  show($('end1'),t,11.3,14.2); show($('end2'),t,11.9,14.2);
+  show($('url'),t,12.2,14.2,{x:'translateX(-50%)',scale:.3});
+  // Quick white flashes on scene cuts
+  const cuts=[2.8,5.6,8.4,11.2]; let f=0; cuts.forEach(cut=>{const d=t-cut; if(d>=0&&d<.25) f=Math.max(f,.35*(1-d/.25));});
+  $('flash').style.opacity=f;
+  $('stage').style.opacity=1-ease(seg(t,13.6,14));
+};
+render(0);
+</script></body></html>
