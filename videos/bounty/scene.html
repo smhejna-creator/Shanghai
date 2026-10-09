@@ -8,69 +8,90 @@
   #grid{position:absolute;inset:-100px;opacity:.5;
     background-image:linear-gradient(rgba(245,184,46,.05) 2px,transparent 2px),linear-gradient(90deg,rgba(245,184,46,.05) 2px,transparent 2px);
     background-size:96px 96px}
+  #world{position:absolute;inset:0}
   #phone{position:absolute;left:172px;top:372px;width:736px;height:1551px;border-radius:96px;
-    background:#0d0d14;box-shadow:0 0 0 3px #2a2838,0 0 0 5px rgba(245,184,46,.35),0 60px 140px rgba(0,0,0,.7),0 0 120px rgba(245,184,46,.18);
-    transform-origin:50% 40%}
+    background:#0d0d14;box-shadow:0 0 0 3px #2a2838,0 0 0 5px rgba(245,184,46,.35),0 60px 140px rgba(0,0,0,.7),0 0 120px rgba(245,184,46,.18)}
   #screen{position:absolute;left:18px;top:18px;width:700px;height:1515px;border-radius:80px;overflow:hidden;background:#09090f}
-  #screen img{position:absolute;left:0;top:0;width:700px;height:1515px;transform-origin:50% 50%}
-  #notch{position:absolute;left:50%;top:34px;width:190px;height:44px;margin-left:-95px;border-radius:30px;background:#000;z-index:3}
-  #capwrap{position:absolute;left:0;top:70px;width:100%;height:290px;display:flex;align-items:center;justify-content:center;z-index:5}
-  .cap{position:absolute;width:100%;text-align:center;font-family:'Inter Display','Inter',sans-serif;font-weight:900;
-    font-size:92px;line-height:1.02;letter-spacing:-2px;color:#fff;text-transform:uppercase;opacity:0;
+  #screen img{position:absolute;left:0;top:0;width:700px;height:1515px}
+  #capwrap{position:absolute;left:0;top:70px;width:100%;height:290px;z-index:5}
+  .cap{position:absolute;left:0;top:0;width:100%;height:290px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;font-family:'Inter Display','Inter',sans-serif;font-weight:900;
+    font-size:100px;line-height:1.0;letter-spacing:-2px;color:#fff;text-transform:uppercase;opacity:0;
     text-shadow:0 8px 30px rgba(0,0,0,.6)}
-  .cap .g{color:#F5B82E}
-  .cap small{display:block;font-size:44px;letter-spacing:0;font-weight:700;color:#cfcbe6;text-transform:none;margin-top:14px}
-  #flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:9;pointer-events:none}
+  .g{color:#F5B82E}.gr{color:#2EE07A}.rd{color:#FF4D5E}
+  #slam{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+  #slam img{width:620px;height:620px;filter:drop-shadow(0 30px 90px rgba(245,184,46,.45))}
+  #slam .t{font-family:'Inter Display','Inter',sans-serif;font-weight:900;font-size:128px;letter-spacing:-3px;line-height:.95;color:#fff;text-align:center;margin-top:30px;text-transform:uppercase}
   #end{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
-  #end img{width:470px;height:470px;filter:drop-shadow(0 30px 80px rgba(245,184,46,.35))}
-  #end .t1{font-family:'Inter Display','Inter',sans-serif;font-weight:900;font-size:96px;letter-spacing:-2px;color:#fff;margin-top:40px;text-align:center;line-height:1.02}
-  #end .t1 span{color:#F5B82E}
-  #end .t2{font-family:'Inter',sans-serif;font-size:46px;color:#cfcbe6;margin-top:26px}
+  #end img{width:420px;height:420px;filter:drop-shadow(0 30px 80px rgba(245,184,46,.35))}
+  #end .t1{font-family:'Inter Display','Inter',sans-serif;font-weight:900;font-size:104px;letter-spacing:-2px;color:#fff;margin-top:40px;text-align:center;line-height:1.0;text-transform:uppercase}
   #end .pill{margin-top:56px;font-family:'Inter',sans-serif;font-weight:800;font-size:54px;color:#0b0b10;
     background:linear-gradient(180deg,#F8C64A,#E0A21E);padding:28px 60px;border-radius:999px;box-shadow:0 20px 60px rgba(245,184,46,.35)}
-  #tap{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:6px solid #fff;opacity:0;z-index:4}
+  #go{position:absolute;left:0;top:1560px;width:100%;text-align:center;font-family:'Inter Display','Inter',sans-serif;font-weight:900;font-size:170px;
+    letter-spacing:-4px;color:#F5B82E;opacity:0;z-index:7;text-shadow:0 10px 60px rgba(245,184,46,.5)}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:9;pointer-events:none}
 </style></head>
 <body><div id="stage">
   <div id="grid"></div>
-  <div id="phone"><div id="screen"><img id="img"></div></div>
-  <div id="capwrap">
-    <div class="cap" id="c1">Every season…</div>
-    <div class="cap" id="c2">Who <span class="g">really</span><br>knows football?</div>
-    <div class="cap" id="c3"><span class="g">NFL Bounty</span><br>Hunters</div>
-    <div class="cap" id="c4">Bid on all<br><span class="g">32 teams</span></div>
-    <div class="cap" id="c5">Live <span class="g">bidding war</span><small>10 friends. One Dallas Cowboys.</small></div>
-    <div class="cap" id="c6"><span class="g">$425.</span> Sold.<small>Going once… going twice…</small></div>
-    <div class="cap" id="c7">Set weekly<br><span class="g">bounties</span></div>
-    <div class="cap" id="c8">Win… and<br><span class="g">collect</span></div>
-    <div class="cap" id="c9">Bragging<br><span class="g">rights</span></div>
-  </div>
-  <div id="end">
-    <img src="../logo.svg">
-    <div class="t1">Your league<br>is <span>waiting.</span></div>
-    <div class="t2">Auction · Bounties · Bragging Rights</div>
-    <div class="pill">bountyleague.netlify.app</div>
+  <div id="world">
+    <div id="phone"><div id="screen"><img id="img"></div></div>
+    <div id="capwrap">
+      <div class="cap" id="c1"><span class="g">32</span>&nbsp;teams</div>
+      <div class="cap" id="c2">One <span class="g">auction</span></div>
+      <div class="cap" id="c3">Every game…</div>
+      <div class="cap" id="c4">has a <span class="g">bounty</span><br>on the line</div>
+      <div class="cap" id="c5">This is…</div>
+      <div class="cap" id="c6">Bid on <span class="g">every</span><br>team</div>
+      <div class="cap" id="c7">Live. Against<br>your <span class="g">friends</span></div>
+      <div class="cap" id="c8"><span class="g">Sold!</span> $425</div>
+      <div class="cap" id="c9">Your team<br>wins?</div>
+      <div class="cap" id="c10">You <span class="gr">collect</span></div>
+      <div class="cap" id="c11">Your team<br>loses?</div>
+      <div class="cap" id="c12">You <span class="rd">pay up</span></div>
+      <div class="cap" id="c13">Bragging<br><span class="g">rights</span></div>
+      <div class="cap" id="c14">All season<br><span class="g">long</span></div>
+    </div>
+    <div id="slam"><img src="../logo.svg"><div class="t">NFL Bounty<br><span class="g">Hunters</span></div></div>
+    <div id="end">
+      <img src="../logo.svg">
+      <div class="t1">Start your<br><span class="g">league</span></div>
+      <div class="pill">bountyleague.netlify.app</div>
+    </div>
+    <div id="go">LET'S GO!</div>
   </div>
   <div id="flash"></div>
 </div>
 <script src="clips.js"></script>
 <script>
 const $=id=>document.getElementById(id);
+document.querySelectorAll('.cap').forEach(c=>{c.innerHTML='<div>'+c.innerHTML+'</div>';});
 const clamp=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>clamp((t-a)/(b-a));
 const ease=x=>1-Math.pow(1-clamp(x),3);
 const io=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
-// Timeline: [start, end, clip, r0, r1, zoom0, zoom1, originX, originY]
+const back=x=>{x=clamp(x);const c1=2.2,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
+// [start, end, clip, r0, r1, zoom0, zoom1, originX, originY]
 const SHOTS=[
-  [0.0, 7.6, 'landing', 0.0, 7.6, 1.00,1.06, .5,.35],
-  [7.6, 10.6,'auction', 3.6, 9.6, 1.00,1.00, .5,.5],
-  [10.6,14.0,'auction', 9.6, 48.7,1.06,1.16, .5,.42],
-  [14.0,17.0,'auction', 51.5,60.5,1.16,1.10, .5,.42],
-  [17.0,18.7,'games',   0.6, 3.6, 1.00,1.08, .5,.45],
-  [18.7,20.3,'myteams', 0.2, 1.8, 1.00,1.18, .3,.24],
-  [20.3,22.9,'standings',0.3,3.0, 1.00,1.06, .5,.35],
-  [22.9,26.0,'standings',3.0,3.0, 1.06,1.06, .5,.35],
+  [0.00, 1.75,'allteams', 0.0, 1.8, 1.00,1.04, .5,.3],
+  [1.75, 2.85,'auction',  0.0, 2.2, 1.00,1.05, .5,.25],
+  [2.85, 7.15,'landing',  0.0, 3.4, 1.00,1.18, .3,.22],
+  [7.15, 8.85,'landing',  3.4, 5.6, 1.06,1.00, .5,.5],
+  [8.85,11.35,'landing',  5.6, 5.6, 1.00,1.00, .5,.5],
+  [11.35,12.30,'auction', 3.6, 8.0, 1.00,1.04, .5,.45],
+  [12.30,15.10,'auction', 8.0, 52.0,1.06,1.16, .5,.42],
+  [15.10,16.45,'auction', 57.4,61.6,1.16,1.10, .5,.42],
+  [16.45,17.60,'games',   0.6, 2.6, 1.00,1.06, .5,.45],
+  [17.60,18.86,'myteams', 0.2, 1.8, 1.00,1.18, .3,.24],
+  [18.86,20.40,'games',   0.2, 0.2, 1.20,1.50, .5,.56],
+  [20.40,21.95,'hunterteams',0,0,   1.05,1.30, .3,.28],
+  [21.95,25.50,'standings',0.3,3.4, 1.00,1.06, .5,.35],
+  [25.50,30.00,'standings',3.4,3.4, 1.06,1.06, .5,.35],
 ];
-const CAPS=[['c1',0.45,2.85],['c2',3.2,5.2],['c3',5.4,7.6],['c4',7.65,10.6],['c5',10.6,14.0],['c6',14.6,17.0],['c7',17.0,18.7],['c8',18.7,20.3],['c9',20.3,22.8]];
-const CUTS=[7.6,17.0,18.7,20.3];
+// caption id, in, out (video seconds = VO seconds + 0.3)
+const CAPS=[['c1',0.45,1.7],['c2',1.7,2.8],['c3',3.1,4.65],['c4',4.65,7.1],['c5',8.0,8.85],
+  ['c6',11.4,13.05],['c7',13.05,15.1],['c8',15.35,16.45],['c9',16.5,17.5],['c10',17.85,18.86],
+  ['c11',18.9,20.4],['c12',20.45,21.95],['c13',22.05,23.8],['c14',23.8,25.5]];
+const HITS=[8.85,15.4,17.9,20.8,27.2];   // flash + shake
+const CUTS=[1.75,2.85,11.35,16.45,17.6,18.86,20.4,21.95];
 function frameFor(clip,r){
   const c=CLIPS[clip], ts=c.times; let lo=0,hi=ts.length-1;
   while(lo<hi){const m=(lo+hi+1)>>1; if(ts[m]<=r) lo=m; else hi=m-1;}
@@ -79,28 +100,39 @@ function frameFor(clip,r){
 window.render=async function(t){
   const s=SHOTS.find(x=>t>=x[0]&&t<x[1])||SHOTS[SHOTS.length-1];
   const k=seg(t,s[0],s[1]);
-  const r=s[3]+(s[4]-s[3])*k;
-  const img=$('img'); const src=frameFor(s[2],r);
+  const img=$('img'); const src=frameFor(s[2],s[3]+(s[4]-s[3])*k);
   if(img.getAttribute('src')!==src){ img.src=src; try{await img.decode();}catch(e){} }
-  const z=s[5]+(s[6]-s[5])*io(k);
   img.style.transformOrigin=`${s[7]*100}% ${s[8]*100}%`;
-  img.style.transform=`scale(${z})`;
-  // Phone entrance + exit
-  const enter=ease(seg(t,0,0.8)), exit=io(seg(t,22.9,23.6));
-  $("phone").style.transform=`translateY(${(1-enter)*500 + exit*1800}px) scale(${1-exit*.15})`;
-  $('phone').style.opacity=1-ease(seg(t,23.1,23.6));
-  // Cut punch
-  let punch=0; CUTS.forEach(c=>{const d=t-c; if(d>=0&&d<.3) punch=Math.max(punch,1-d/.3);});
-  $('flash').style.opacity=punch*.18;
-  $('screen').style.transform=`scale(${1+punch*.02})`;
+  img.style.transform=`scale(${s[5]+(s[6]-s[5])*io(k)})`;
+  // Phone: enters, hides during logo slam, returns, exits for end card
+  const enter=ease(seg(t,0,0.5));
+  const away=t>=8.85&&t<11.35 ? 1 : 0;
+  const back_in=ease(seg(t,11.35,11.75));
+  const exit=io(seg(t,25.5,26.1));
+  let y=(1-enter)*500 + exit*1800, sc=1-exit*.15, op=1;
+  if(t>=8.85&&t<11.35) op=0;
+  if(t>=11.35&&t<11.75){ y+= (1-back_in)*700; }
+  $('phone').style.transform=`translateY(${y}px) scale(${sc})`;
+  $('phone').style.opacity=op*(1-ease(seg(t,25.6,26.0)));
+  // Logo slam
+  const sl=seg(t,8.85,9.25), slo=1-ease(seg(t,11.05,11.35));
+  $('slam').style.opacity=t>=8.85?Math.min(ease(sl)*1.2,1)*slo:0;
+  $('slam').style.transform=`scale(${t>=8.85?1.6-0.6*back(sl)+0.02*Math.sin(t*3):1})`;
   // Captions
-  CAPS.forEach(([id,a,b])=>{const el=$(id); const i=ease(seg(t,a,a+.3)), o=1-ease(seg(t,b-.2,b));
-    el.style.opacity=Math.min(i,o); el.style.transform=`translateY(${(1-i)*30}px) scale(${.92+.08*i})`;});
-  // End card
-  const e=ease(seg(t,23.0,23.8));
-  $('end').style.opacity=e; $('end').style.transform=`scale(${.9+.1*e})`;
-  $('end').querySelector('.pill').style.transform=`scale(${1+.03*Math.sin(t*5)*seg(t,24,24.5)})`;
-  $('stage').style.opacity=1-ease(seg(t,25.5,26));
-  $('grid').style.transform=`translateY(${(t*30)%96}px)`;
+  CAPS.forEach(([id,a,b])=>{const el=$(id); const i=ease(seg(t,a,a+.18)), o=1-ease(seg(t,b-.12,b));
+    el.style.opacity=Math.min(i,o); el.style.transform=`scale(${1.25-.25*back(seg(t,a,a+.3))})`;});
+  // End card + LET'S GO
+  const e=ease(seg(t,25.6,26.2));
+  $('end').style.opacity=e; $('end').style.transform=`scale(${.9+.1*e}) translateY(${-120*ease(seg(t,27.2,27.5))}px)`;
+  const g=seg(t,27.2,27.45);
+  $('go').style.opacity=t>=27.2?ease(g)*(1-ease(seg(t,29.4,29.9))):0;
+  $('go').style.transform=`scale(${t>=27.2?1.8-.8*back(g):1})`;
+  // Hits: flash + shake
+  let hit=0; HITS.forEach(h=>{const d=t-h; if(d>=0&&d<.45) hit=Math.max(hit,1-d/.45);});
+  let cut=0; CUTS.forEach(c=>{const d=t-c; if(d>=0&&d<.2) cut=Math.max(cut,1-d/.2);});
+  $('flash').style.opacity=Math.max(hit*.55,cut*.14);
+  const sh=hit*hit*22; $('world').style.transform=`translate(${Math.sin(t*90)*sh}px,${Math.cos(t*77)*sh}px)`;
+  $('stage').style.opacity=1-ease(seg(t,29.6,30));
+  $('grid').style.transform=`translateY(${(t*(t>8.85?120:30))%96}px)`;
 };
 </script></body></html>
