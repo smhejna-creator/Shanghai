@@ -86,7 +86,10 @@ while True:
         for r in range(6): add(hat(), t0 + 3.5 * beat + r * beat / 12, pan=.2, gain=.5 + r * .06)
     add(hat(True), t0 + 3.5 * beat, pan=-.2, gain=.6)
 # Stop window (silence the beat for the SOLD! moment), then impacts
-a, z = int(STOP[0] * SR), int(STOP[1] * SR); mix[a:z] *= np.linspace(1, 0, z - a)[:, None] ** 0 * 0.0
+a, z = int(STOP[0] * SR), int(STOP[1] * SR)
+f = int(.22 * SR); mix[a - f:a] *= np.linspace(1, 0, f)[:, None] ** 2   # smooth fade into the gap
+mix[a:z] = 0
+r = int(.01 * SR); mix[z:z + r] *= np.linspace(0, 1, r)[:, None]          # no click on re-entry
 add(impact(), DROP, gain=1.0); add(impact(1.6), STOP[1], gain=.8); add(impact(3.0), END, gain=1.1)
 # End: let pad ring after END
 n = int(2.5 * SR); add(pad_chord(chords[0], 2.5) * 1.4, END)
