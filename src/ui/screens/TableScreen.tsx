@@ -15,7 +15,7 @@ import { Seat } from '../components/Seat';
 
 type Mode = { kind: 'idle' } | { kind: 'replace'; meldId: string; wildCardId: string; naturalCardId: string };
 
-export function TableScreen({ game, gameId, user, onError }: { game: GameData; gameId: string; user: User; onError: (m: string) => void }) {
+export function TableScreen({ game, gameId, user, onError }: { game: Extract<GameData, { gameType: 'shanghai' }>; gameId: string; user: User; onError: (m: string) => void }) {
   const { view, ruleSet: rs } = game;
   const desktop = useIsDesktop();
   const me = view.players.find((p) => p.userId === user.id);
@@ -221,24 +221,36 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
       if (myTurn) return `Buy window open. ${priorityName} deciding… draw from stock to end it.`;
       return `${priorityName} deciding whether to buy…`;
     }
-    if (view.phase === 'turn.draw') return myTurn ? 'Draw from the stock or take the discard.' : `${current?.name} is drawing…`;
+    if (view.phase === 'turn.draw') return myTurn ? 'Draw a card: tap the stock or take the discard.' : `${current?.name} is drawing…`;
     if (view.phase === 'turn.play') {
       if (!myTurn) return `${current?.name} is playing…`;
       if (mode.kind === 'replace') return 'Tap the meld where the freed wild should go.';
-      return me?.hasLaidDown ? 'Select cards, then tap a meld to lay off.' : 'Build your contract, then discard.';
+      if (me?.hasLaidDown) return contract.noDiscard ? 'Lay off cards onto any meld. Go out by playing your last card.' : 'Lay off onto any meld if you can, then select a card and discard.';
+      return `Need ${contract.name}? Group them and lay down. Otherwise select a card and discard.`;
     }
     return '';
   })();
 
   const cardSize = desktop ? 'lg' : 'md';
+  const meldsByOwner = view.players.map((p) => ({ player: p, melds: view.melds.filter((m) => m.ownerSeat === p.seat) })).filter((g) => g.melds.length > 0);
   const meldsPanel = (
     <>
       {view.melds.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-white/15 py-4 text-center text-xs text-white/40">No melds on the table yet</p>
+        <p className="rounded-xl border border-dashed border-white/15 py-4 text-center text-xs text-white/40">Nobody has laid down yet. First to complete the contract lays it here.</p>
       ) : (
-        <div className="no-scrollbar flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
-          {view.melds.map((m) => (
-            <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={view.players[m.ownerSeat]?.name ?? ''} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
+        <div className="no-scrollbar flex gap-3 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible">
+          {meldsByOwner.map(({ player, melds }) => (
+            <div key={player.seat} className="shrink-0 rounded-xl border border-line bg-black/20 p-2">
+              <div className="mb-1.5 flex items-center gap-1.5 text-xs font-semibold">
+                <span className={player.seat === mySeat ? 'text-gold' : 'text-white/85'}>{player.isBot && '🤖 '}{player.seat === mySeat ? 'Your melds' : `${player.name}'s melds`}</span>
+                <span className="text-white/40">· {melds.length}</span>
+              </div>
+              <div className="flex gap-2 lg:flex-col">
+                {melds.map((m) => (
+                  <MeldView key={m.id} meld={m} ruleSet={rs} ownerName={player.name} showOwner={false} highlight={mode.kind === 'replace' && mode.meldId === m.id} onTap={canPlay ? () => tapMeld(m) : undefined} onTapCard={canPlay && me?.hasLaidDown ? (id) => tapMeldCard(m, id) : undefined} />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -278,6 +290,11 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
         </div>
       )}
     </div>
+  ) : myTurn && (view.phase === 'turn.draw' || view.phase === 'turn.play') ? (
+    <div className="flex items-center justify-center gap-3 rounded-xl border border-gold/50 bg-gold/15 px-3 py-2 animate-rise">
+      <span className="label !text-gold">Your turn</span>
+      <span className="text-sm text-white/90">{status}</span>
+    </div>
   ) : (
     <p className="py-1 text-center text-xs text-white/60 lg:text-sm">{status}</p>
   );
@@ -294,7 +311,7 @@ export function TableScreen({ game, gameId, user, onError }: { game: GameData; g
     <div className="flex h-full flex-col">
       {/* Top bar */}
       <header className="safe-top flex items-center justify-between border-b border-line bg-ink-2/80 px-3 py-2 backdrop-blur lg:px-6">
-        <div className="hidden lg:block"><Logo size="sm" className="!items-start" /></div>
+        <div className="hidden lg:block"><Logo size="sm" className="!items-start" title="SHANGHAI" subtitle="Winning Hand" /></div>
         <div className="lg:text-center">
           <div className="label">Round {view.roundIndex + 1} of {rs.rounds.length}</div>
           <div className="font-display text-base font-bold capitalize text-white lg:text-xl">

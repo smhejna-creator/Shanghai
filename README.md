@@ -1,6 +1,6 @@
-# Shanghai
+# Winning Hand
 
-Online multiplayer Shanghai Rummy (contract rummy). Vite + React + TypeScript + Tailwind on the
+Online multiplayer card room: Shanghai Rummy (contract rummy) and Swoop. Vite + React + TypeScript + Tailwind on the
 client, Supabase (magic-link auth, Postgres, Realtime, Edge Functions) on the server, deployed to
 Netlify. See `PLAN.md` for the design.
 

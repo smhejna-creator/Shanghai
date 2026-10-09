@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Card, RuleSet } from '@/engine/index.ts';
-import { isWild, rankValue, type Rank } from '@/engine/index.ts';
+import type { Card } from '@/engine/index.ts';
+import { rankValue, type Rank } from '@/engine/index.ts';
+import { isSpecial, type AnyRuleSet } from '../wild';
 import { CardView } from './CardView';
 
 interface Props {
   /** Cards in display order (controlled by the parent). */
   cards: Card[];
-  ruleSet: RuleSet;
+  ruleSet: AnyRuleSet;
   selected: Set<string>;
   onToggle: (id: string) => void;
   onReorder: (ids: string[]) => void;
@@ -14,8 +15,8 @@ interface Props {
 }
 
 /** Two neighbours "belong together" when they could share a set or a run. Used for visual gaps. */
-export function related(a: Card, b: Card, rs: RuleSet): boolean {
-  if (isWild(a, rs) || isWild(b, rs)) return true;
+export function related(a: Card, b: Card, rs: AnyRuleSet): boolean {
+  if (isSpecial(a, rs) || isSpecial(b, rs)) return true;
   if (a.rank === b.rank) return true;
   if (a.suit === b.suit) {
     const d = Math.abs(rankValue(a.rank as Rank) - rankValue(b.rank as Rank));

@@ -1,4 +1,4 @@
-import type { Action, EngineError, RuleSet } from '@/engine/index.ts';
+import type { Action, EngineError, GameType, RuleSet, SwoopAction, SwoopRuleSet } from '@/engine/index.ts';
 import { supabase } from './client';
 
 export class ApiError extends Error {
@@ -8,7 +8,11 @@ export class ApiError extends Error {
 }
 
 type DistributiveOmit<T, K extends PropertyKey> = T extends unknown ? Omit<T, K> : never;
-export type ActionInput = DistributiveOmit<Extract<Action, { userId: string }>, 'userId' | 'now' | 'botId'> | { type: 'REMOVE_BOT'; botId: string } | { type: 'TICK' };
+export type ActionInput =
+  | DistributiveOmit<Extract<Action, { userId: string }>, 'userId' | 'now' | 'botId'>
+  | DistributiveOmit<Extract<SwoopAction, { userId: string }>, 'userId' | 'now' | 'botId'>
+  | { type: 'REMOVE_BOT'; botId: string }
+  | { type: 'TICK' };
 
 async function call<T>(body: Record<string, unknown>): Promise<T> {
   const { data, error } = await supabase.functions.invoke('game-action', { body });
@@ -31,7 +35,7 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
 }
 
 export const api = {
-  createGame: (ruleSet: RuleSet, name: string) => call<{ gameId: string; joinCode: string }>({ op: 'create', ruleSet, name }),
+  createGame: (gameType: GameType, ruleSet: RuleSet | SwoopRuleSet, name: string) => call<{ gameId: string; joinCode: string }>({ op: 'create', gameType, ruleSet, name }),
   joinGame: (joinCode: string, name: string) => call<{ gameId: string; rejoined?: boolean }>({ op: 'join', joinCode, name }),
   action: (gameId: string, action: ActionInput, expectedVersion?: number) =>
     call<{ ok: true; version: number }>({ op: 'action', gameId, action, expectedVersion }),
@@ -39,20 +43,20 @@ export const api = {
   lookupGame: async (code: string) => {
     const { data, error } = await supabase.rpc('lookup_game', { code });
     if (error) throw new ApiError('LOOKUP', error.message);
-    return (data as { id: string; status: string; host_name: string; player_count: number; ruleset_name: string }[])[0] ?? null;
+    return (data as { id: string; status: string; host_name: string; player_count: number; ruleset_name: string; game_type: GameType }[])[0] ?? null;
   },
   myGames: async () => {
     const { data, error } = await supabase.rpc('my_games');
     if (error) throw new ApiError('LIST', error.message);
-    return (data ?? []) as { id: string; join_code: string; status: string; ruleset_name: string; updated_at: string }[];
+    return (data ?? []) as { id: string; join_code: string; status: string; ruleset_name: string; updated_at: string; game_type: GameType }[];
   },
 
   savedRuleSets: async () => {
     const { data, error } = await supabase.from('saved_rulesets').select('id,name,ruleset,updated_at').order('updated_at', { ascending: false });
     if (error) throw new ApiError('RULESETS', error.message);
-    return (data ?? []) as { id: string; name: string; ruleset: RuleSet; updated_at: string }[];
+    return (data ?? []) as { id: string; name: string; ruleset: RuleSet | SwoopRuleSet; updated_at: string }[];
   },
-  saveRuleSet: async (ownerId: string, name: string, ruleset: RuleSet, id?: string) => {
+  saveRuleSet: async (ownerId: string, name: string, ruleset: RuleSet | SwoopRuleSet, id?: string) => {
     const row = { owner_id: ownerId, name, ruleset: { ...ruleset, name }, updated_at: new Date().toISOString() };
     const q = id ? supabase.from('saved_rulesets').update(row).eq('id', id) : supabase.from('saved_rulesets').insert(row);
     const { error } = await q;

@@ -1,19 +1,14 @@
 // Shanghai: server-authoritative game actions.
 // Every client action is validated with the same pure engine used in the browser.
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import {
-  botAction,
-  createGame,
-  reduce,
-  toPublicState,
-  validateRuleSet,
-  type Action,
-  type Card,
-  type GameState,
-  type PlayerState,
-  type PublicState,
-  type RuleSet,
-} from '../_shared/engine/index.ts';
+import { gameModule, type Card, type GameModule } from '../_shared/engine/index.ts';
+
+// deno-lint-ignore no-explicit-any
+type AnyState = any;
+// deno-lint-ignore no-explicit-any
+type AnyRuleSet = any;
+// deno-lint-ignore no-explicit-any
+type AnyAction = any;
 
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const ANON_KEY = Deno.env.get('SUPABASE_ANON_KEY')!;
@@ -31,52 +26,42 @@ const json = (body: unknown, status = 200) =>
 
 const admin = (): SupabaseClient => createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
-type GameRow = { id: string; join_code: string; host_id: string; status: string; ruleset: RuleSet; public_state: PublicState; version: number };
+type GameRow = { id: string; join_code: string; host_id: string; status: string; game_type: string; ruleset: AnyRuleSet; public_state: AnyState; version: number };
 type HandRow = { seat: number; user_id: string; cards: Card[] };
 
-async function loadGame(db: SupabaseClient, gameId: string): Promise<{ row: GameRow; state: GameState } | null> {
+async function loadGame(db: SupabaseClient, gameId: string): Promise<{ row: GameRow; mod: GameModule; state: AnyState } | null> {
   const { data: row } = await db.from('games').select('*').eq('id', gameId).maybeSingle<GameRow>();
   if (!row) return null;
+  const mod = gameModule(row.game_type);
   const [{ data: hands }, { data: secrets }] = await Promise.all([
     db.from('game_hands').select('seat,user_id,cards').eq('game_id', gameId),
-    db.from('game_secrets').select('stock,rng_seed').eq('game_id', gameId).maybeSingle<{ stock: Card[]; rng_seed: string }>(),
+    db.from('game_secrets').select('stock,rng_seed').eq('game_id', gameId).maybeSingle<{ stock: unknown; rng_seed: string }>(),
   ]);
-  const handBySeat = new Map<number, Card[]>((hands as HandRow[] | null)?.map((h) => [h.seat, h.cards]) ?? []);
-  const { stockCount: _sc, players, ...rest } = row.public_state;
-  const state: GameState = {
-    ...rest,
-    stock: secrets?.stock ?? [],
-    rngSeed: secrets?.rng_seed ?? rest.rngSeed,
-    players: players.map(({ handCount: _hc, ...p }): PlayerState => ({ ...p, hand: handBySeat.get(p.seat) ?? [] })),
-  };
-  return { row, state };
+  const handRows = ((hands as HandRow[] | null) ?? []).map((h) => ({ seat: h.seat, userId: h.user_id, cards: h.cards }));
+  const state = mod.merge(row.public_state, handRows, secrets?.stock);
+  if (secrets?.rng_seed) state.rngSeed = secrets.rng_seed;
+  return { row, mod, state };
 }
 
-function statusOf(state: GameState): string {
-  if (state.phase === 'lobby') return 'lobby';
-  if (state.phase === 'game.over') return 'finished';
-  return 'playing';
+function deadlineOf(mod: GameModule, state: AnyState): string | null {
+  const d = mod.deadlineOf(state);
+  return d === null ? null : new Date(d).toISOString();
 }
 
-function deadlineOf(state: GameState): string | null {
-  const candidates = [state.turnDeadline, state.buyWindow?.deadline].filter((x): x is number => typeof x === 'number');
-  if (candidates.length === 0 || state.phase === 'round.over' || state.phase === 'game.over' || state.phase === 'lobby') return null;
-  return new Date(Math.min(...candidates)).toISOString();
-}
-
-async function writeGame(db: SupabaseClient, gameId: string, expectedVersion: number, state: GameState, ruleSet: RuleSet, action: Action): Promise<boolean> {
-  const pub = toPublicState(state);
+async function writeGame(db: SupabaseClient, gameId: string, mod: GameModule, expectedVersion: number, state: AnyState, ruleSet: AnyRuleSet, action: AnyAction): Promise<boolean> {
+  const pub = mod.toPublicState(state);
+  const { hands, secret } = mod.split(state);
   const { data, error } = await db.rpc('apply_game_update', {
     p_game_id: gameId,
     p_expected_version: expectedVersion,
     p_new_version: state.version,
-    p_status: statusOf(state),
+    p_status: mod.statusOf(state),
     p_ruleset: ruleSet,
     p_public_state: pub,
-    p_deadline: deadlineOf(state),
-    p_hands: state.players.map((p) => ({ seat: p.seat, user_id: p.userId, cards: p.hand })),
-    p_players: state.players.map((p) => ({ seat: p.seat, user_id: p.userId, display_name: p.name, is_ready: p.ready, connected: p.connected })),
-    p_stock: state.stock,
+    p_deadline: deadlineOf(mod, state),
+    p_hands: hands.map((h) => ({ seat: h.seat, user_id: h.userId, cards: h.cards })),
+    p_players: mod.players(state).map((p) => ({ seat: p.seat, user_id: p.userId, display_name: p.name, is_ready: p.ready, connected: p.connected })),
+    p_stock: secret,
     p_event: action,
   });
   if (error) throw new Error(error.message);
@@ -84,11 +69,11 @@ async function writeGame(db: SupabaseClient, gameId: string, expectedVersion: nu
 }
 
 /** Let bots act until a human is needed (or the game pauses). Returns the final state. */
-function driveBots(rs: RuleSet, state: GameState): GameState {
+function driveBots(mod: GameModule, rs: AnyRuleSet, state: AnyState): AnyState {
   for (let i = 0; i < 200; i++) {
-    const a = botAction(rs, state, Date.now());
+    const a = mod.botAction(rs, state, Date.now());
     if (!a) break;
-    const r = reduce(rs, state, a);
+    const r = mod.reduce(rs, state, a);
     if (!r.ok) {
       console.error('bot action rejected', a.type, r.error);
       break;
@@ -99,17 +84,17 @@ function driveBots(rs: RuleSet, state: GameState): GameState {
 }
 
 /** Apply an action with optimistic-concurrency retries. */
-async function applyAction(db: SupabaseClient, gameId: string, makeAction: (state: GameState) => Action, expectedVersion?: number) {
+async function applyAction(db: SupabaseClient, gameId: string, makeAction: (state: AnyState) => AnyAction, expectedVersion?: number) {
   for (let attempt = 0; attempt < 4; attempt++) {
     const loaded = await loadGame(db, gameId);
     if (!loaded) return json({ error: { code: 'NOT_FOUND', message: 'Game not found' } }, 404);
     if (expectedVersion !== undefined && attempt === 0 && loaded.row.version !== expectedVersion)
       return json({ error: { code: 'STALE', message: 'Your view of the game is out of date' }, version: loaded.row.version }, 409);
     const action = makeAction(loaded.state);
-    const result = reduce(loaded.row.ruleset, loaded.state, action);
+    const result = loaded.mod.reduce(loaded.row.ruleset, loaded.state, action);
     if (!result.ok) return json({ error: result.error, version: loaded.row.version }, 400);
-    const finalState = driveBots(result.ruleSet, result.state);
-    const written = await writeGame(db, gameId, loaded.row.version, finalState, result.ruleSet, action);
+    const finalState = driveBots(loaded.mod, result.ruleSet, result.state);
+    const written = await writeGame(db, gameId, loaded.mod, loaded.row.version, finalState, result.ruleSet, action);
     if (written) return json({ ok: true, version: finalState.version });
   }
   return json({ error: { code: 'CONFLICT', message: 'Game changed while processing; try again' } }, 409);
@@ -126,18 +111,18 @@ async function tick(db: SupabaseClient, gameId: string) {
   for (let i = 0; i < 5; i++) {
     const loaded = await loadGame(db, gameId);
     if (!loaded) return json({ error: { code: 'NOT_FOUND', message: 'Game not found' } }, 404);
-    const action: Action = { type: 'TICK', now: Date.now() };
-    const result = reduce(loaded.row.ruleset, loaded.state, action);
+    const action: AnyAction = { type: 'TICK', now: Date.now() };
+    const result = loaded.mod.reduce(loaded.row.ruleset, loaded.state, action);
     if (!result.ok) {
       if (result.error.code === 'NOTHING_TO_DO') {
         // A bot may still owe a move (e.g. after a failed write); let it act.
-        const driven = driveBots(loaded.row.ruleset, loaded.state);
+        const driven = driveBots(loaded.mod, loaded.row.ruleset, loaded.state);
         if (driven.version !== loaded.state.version) {
-          await writeGame(db, gameId, loaded.row.version, driven, loaded.row.ruleset, action);
+          await writeGame(db, gameId, loaded.mod, loaded.row.version, driven, loaded.row.ruleset, action);
           return json({ ok: true, ticked: i, bots: true });
         }
         // Clear a stale deadline so pg_cron stops calling us for this game.
-        const dl = deadlineOf(loaded.state);
+        const dl = deadlineOf(loaded.mod, loaded.state);
         if (dl === null || new Date(dl).getTime() > Date.now()) {
           await db.from('games').update({ deadline: dl }).eq('id', gameId);
         }
@@ -145,7 +130,7 @@ async function tick(db: SupabaseClient, gameId: string) {
       }
       return json({ error: result.error }, 400);
     }
-    await writeGame(db, gameId, loaded.row.version, driveBots(loaded.row.ruleset, result.state), result.ruleSet, action);
+    await writeGame(db, gameId, loaded.mod, loaded.row.version, driveBots(loaded.mod, loaded.row.ruleset, result.state), result.ruleSet, action);
   }
   return json({ ok: true, ticked: 5 });
 }
@@ -189,11 +174,14 @@ Deno.serve(async (req) => {
   try {
     switch (op) {
       case 'create': {
-        const ruleSet = body.ruleSet as RuleSet;
-        const problems = validateRuleSet(ruleSet);
+        const gameType = typeof body.gameType === 'string' ? body.gameType : 'shanghai';
+        const mod = gameModule(gameType);
+        if (mod.type !== gameType) return json({ error: { code: 'BAD_REQUEST', message: `Unknown game ${gameType}` } }, 400);
+        const ruleSet = body.ruleSet as AnyRuleSet;
+        const problems = mod.validateRuleSet(ruleSet);
         if (problems.length) return json({ error: { code: 'INVALID_RULESET', message: problems.join('; ') } }, 400);
         const seed = crypto.randomUUID();
-        const init = reduce(ruleSet, createGame(userId, seed), { type: 'JOIN', userId, name: displayName });
+        const init = mod.reduce(ruleSet, mod.createGame(userId, seed), { type: 'JOIN', userId, name: displayName });
         if (!init.ok) return json({ error: init.error }, 400);
         const state = init.state;
         let joinCode = makeJoinCode();
@@ -201,7 +189,7 @@ Deno.serve(async (req) => {
         for (let i = 0; i < 5 && !gameId; i++) {
           const { data, error } = await db
             .from('games')
-            .insert({ join_code: joinCode, host_id: userId, status: 'lobby', ruleset: ruleSet, public_state: toPublicState(state), version: state.version })
+            .insert({ join_code: joinCode, host_id: userId, status: 'lobby', game_type: mod.type, ruleset: ruleSet, public_state: mod.toPublicState(state), version: state.version })
             .select('id')
             .maybeSingle<{ id: string }>();
           if (error) {
@@ -214,7 +202,7 @@ Deno.serve(async (req) => {
           gameId = data!.id;
         }
         if (!gameId) throw new Error('Could not allocate a join code');
-        await db.from('game_secrets').insert({ game_id: gameId, stock: [], rng_seed: seed });
+        await db.from('game_secrets').insert({ game_id: gameId, stock: mod.split(state).secret, rng_seed: seed });
         await db.from('game_players').insert({ game_id: gameId, seat: 0, user_id: userId, display_name: displayName, is_ready: false, connected_at: new Date().toISOString() });
         await db.from('game_hands').insert({ game_id: gameId, seat: 0, user_id: userId, cards: [], version: state.version });
         await db.from('game_events').insert({ game_id: gameId, version: state.version, user_id: userId, action: { type: 'JOIN', userId, name: displayName } });
@@ -248,7 +236,7 @@ Deno.serve(async (req) => {
         }
         const expectedVersion = typeof body.expectedVersion === 'number' ? body.expectedVersion : undefined;
         // The server stamps identity and time; clients cannot spoof either.
-        const action = { ...raw, userId, now: Date.now() } as Action;
+        const action = { ...raw, userId, now: Date.now() } as AnyAction;
         if (action.type === 'ADD_BOT') action.botId = crypto.randomUUID();
         return await applyAction(db, gameId, () => action, expectedVersion);
       }

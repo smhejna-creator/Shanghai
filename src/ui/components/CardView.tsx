@@ -1,11 +1,11 @@
-import type { Card, RuleSet } from '@/engine/index.ts';
-import { isWild } from '@/engine/index.ts';
+import type { Card } from '@/engine/index.ts';
+import { isSpecial, isWildAny, type AnyRuleSet } from '../wild';
 
 const SUIT = { S: '♠', H: '♥', D: '♦', C: '♣', X: '' } as const;
 
 interface Props {
   card: Card;
-  ruleSet: RuleSet;
+  ruleSet: AnyRuleSet;
   selected?: boolean;
   size?: 'xs' | 'sm' | 'md' | 'lg';
   faceDown?: boolean;
@@ -25,7 +25,8 @@ const SIZES = {
 export function CardView({ card, ruleSet, selected, size = 'md', faceDown, standsFor, onClick, className = '', dim }: Props) {
   const S = SIZES[size];
   if (faceDown) return <div className={`card-back ${S.box} ${className}`} />;
-  const wild = isWild(card, ruleSet);
+  const wild = isWildAny(card, ruleSet);
+  const special = isSpecial(card, ruleSet);
   const red = card.suit === 'H' || card.suit === 'D';
   const joker = card.rank === 'JOKER';
   const color = joker ? 'text-purple-700' : red ? 'text-red-600' : 'text-gray-900';
@@ -37,7 +38,7 @@ export function CardView({ card, ruleSet, selected, size = 'md', faceDown, stand
       onClick={onClick}
       className={`card-face relative shrink-0 select-none ${S.box} ${color} transition-transform duration-150 ${
         selected ? '-translate-y-3 ring-2 ring-gold shadow-glow' : ''
-      } ${wild ? 'ring-1 ring-gold/80' : ''} ${dim ? 'opacity-60' : ''} ${className}`}
+      } ${special ? 'ring-1 ring-gold/80' : ''} ${dim ? 'opacity-60' : ''} ${className}`}
     >
       <div className={`absolute left-0 top-0 flex flex-col items-center font-bold ${S.pad} ${S.idx}`}>
         <span>{index}</span>

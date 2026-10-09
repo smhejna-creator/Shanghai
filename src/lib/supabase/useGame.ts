@@ -1,15 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { Card, PlayerView, PublicState, RuleSet } from '@/engine/index.ts';
-import { composeView } from '@/engine/index.ts';
+import type { Card, GameType, PlayerView, PublicState, RuleSet, SwoopPlayerView, SwoopPublicState, SwoopRuleSet } from '@/engine/index.ts';
+import { composeSwoopView, composeView } from '@/engine/index.ts';
 import { supabase } from './client';
 import { api } from './api';
 
-export interface GameData {
-  view: PlayerView;
-  ruleSet: RuleSet;
-  joinCode: string;
-  status: string;
-}
+export type GameData =
+  | { gameType: 'shanghai'; view: PlayerView; ruleSet: RuleSet; joinCode: string; status: string }
+  | { gameType: 'swoop'; view: SwoopPlayerView; ruleSet: SwoopRuleSet; joinCode: string; status: string };
 
 /** Subscribe to a game: the public row plus this user's own hand. Re-renders from server state only. */
 export function useGame(gameId: string | undefined, userId: string | null) {
@@ -21,7 +18,7 @@ export function useGame(gameId: string | undefined, userId: string | null) {
   const refresh = useCallback(async () => {
     if (!gameId) return;
     const [{ data: game, error: gErr }, { data: hand }] = await Promise.all([
-      supabase.from('games').select('join_code,status,ruleset,public_state,version').eq('id', gameId).maybeSingle(),
+      supabase.from('games').select('join_code,status,game_type,ruleset,public_state,version').eq('id', gameId).maybeSingle(),
       userId ? supabase.from('game_hands').select('seat,cards').eq('game_id', gameId).eq('user_id', userId).maybeSingle() : Promise.resolve({ data: null }),
     ]);
     if (gErr) {
@@ -34,13 +31,16 @@ export function useGame(gameId: string | undefined, userId: string | null) {
       setLoading(false);
       return;
     }
-    const g = game as { join_code: string; status: string; ruleset: RuleSet; public_state: PublicState; version: number };
+    const g = game as { join_code: string; status: string; game_type: GameType; ruleset: RuleSet | SwoopRuleSet; public_state: PublicState | SwoopPublicState; version: number };
     const h = hand as { seat: number; cards: Card[] } | null;
     const mySeat = g.public_state.players.find((p) => p.userId === userId)?.seat ?? null;
     setData((prev) => {
       // Ignore out-of-order responses.
       if (prev && prev.view.version > g.public_state.version) return prev;
-      return { view: composeView(g.public_state, mySeat, h?.cards ?? []), ruleSet: g.ruleset, joinCode: g.join_code, status: g.status };
+      if (g.game_type === 'swoop') {
+        return { gameType: 'swoop', view: composeSwoopView(g.public_state as SwoopPublicState, mySeat, h?.cards ?? []), ruleSet: g.ruleset as SwoopRuleSet, joinCode: g.join_code, status: g.status };
+      }
+      return { gameType: 'shanghai', view: composeView(g.public_state as PublicState, mySeat, h?.cards ?? []), ruleSet: g.ruleset as RuleSet, joinCode: g.join_code, status: g.status };
     });
     setError(null);
     setLoading(false);
@@ -70,7 +70,7 @@ export function useGame(gameId: string | undefined, userId: string | null) {
   useEffect(() => {
     if (!data || !gameId) return;
     const v = data.view;
-    const deadlines = [v.turnDeadline, v.buyWindow?.deadline].filter((x): x is number => typeof x === 'number');
+    const deadlines = [v.turnDeadline, data.gameType === 'shanghai' ? data.view.buyWindow?.deadline : undefined].filter((x): x is number => typeof x === 'number');
     if (deadlines.length === 0 || v.phase === 'lobby' || v.phase === 'round.over' || v.phase === 'game.over') return;
     const next = Math.min(...deadlines);
     const delay = Math.max(0, next - Date.now()) + 1500;

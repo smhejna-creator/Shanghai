@@ -1,11 +1,14 @@
-import type { PublicPlayer, RuleSet } from '@/engine/index.ts';
+
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-export function Scoreboard({ players, ruleSet, upToRound, final }: { players: PublicPlayer[]; ruleSet: RuleSet; upToRound: number; final?: boolean }) {
+interface ScorePlayer { seat: number; name: string; scores: number[]; isBot?: boolean }
+interface Props { players: ScorePlayer[]; roundNames: string[]; upToRound: number; final?: boolean; lowestWins?: boolean }
+
+export function Scoreboard({ players, roundNames, upToRound, final }: Props) {
   const totals = players.map((p) => p.scores.slice(0, upToRound + 1).reduce((a, b) => a + (b ?? 0), 0));
   const ranked = players.map((p, i) => ({ p, total: totals[i] })).sort((a, b) => a.total - b.total);
-  const rounds = ruleSet.rounds.slice(0, upToRound + 1);
+  const rounds = roundNames.slice(0, upToRound + 1).map((name, i) => ({ id: String(i), name }));
   return (
     <div className="panel overflow-hidden">
       <div className="overflow-x-auto">

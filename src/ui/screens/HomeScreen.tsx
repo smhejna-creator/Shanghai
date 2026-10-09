@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import type { User } from '@supabase/supabase-js';
+import { GAMES, type GameType } from '@/engine/index.ts';
 import { api } from '@/lib/supabase/api';
 import { Button } from '../components/Button';
 import { Logo } from '../components/Logo';
@@ -47,11 +48,21 @@ export function HomeScreen({ user, signOut }: { user: User; signOut: () => void 
         <section className="panel flex flex-col gap-3 p-5">
           <div>
             <div className="font-display text-xl font-bold">Open a table</div>
-            <p className="text-sm text-white/55">Pick the house rules, invite friends or add bots, and deal.</p>
+            <p className="text-sm text-white/55">Pick a game and its house rules, invite friends or add bots, and deal.</p>
           </div>
           <label className="label">Your name at the table</label>
           <input value={name} onChange={(e) => setName(e.target.value)} onBlur={() => api.setDisplayName(user.id, name.trim().slice(0, 24) || 'Player')} maxLength={24} className="input" />
-          <Button size="lg" onClick={() => nav('/new')}>♠ New table</Button>
+          <div className="grid gap-2">
+            {(Object.keys(GAMES) as GameType[]).map((g) => (
+              <button key={g} onClick={() => nav(`/new/${g}`)} className="group flex items-center justify-between rounded-xl border border-line bg-ink-3 px-4 py-3 text-left transition hover:border-gold/50 hover:bg-ink-4">
+                <span>
+                  <span className="font-display text-lg font-bold text-white group-hover:text-gold">{g === 'shanghai' ? '♠ ' : '♦ '}{GAMES[g].title}</span>
+                  <span className="block text-xs text-white/55">{GAMES[g].tagline}</span>
+                </span>
+                <span className="ml-3 text-gold">→</span>
+              </button>
+            ))}
+          </div>
         </section>
 
         <section className="panel flex flex-col gap-3 p-5">
@@ -83,7 +94,8 @@ export function HomeScreen({ user, signOut }: { user: User; signOut: () => void 
                 <Link to={`/g/${g.id}`} className="panel flex items-center justify-between px-4 py-3 hover:border-gold/40">
                   <span>
                     <span className="font-mono text-base font-bold tracking-[0.25em] text-gold">{g.join_code}</span>
-                    <span className="ml-3 text-sm text-white/60">{g.ruleset_name}</span>
+                    <span className="ml-3 text-sm text-white/80">{GAMES[g.game_type]?.title ?? 'Shanghai'}</span>
+                    <span className="ml-2 text-sm text-white/50">{g.ruleset_name}</span>
                   </span>
                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${g.status === 'playing' ? 'bg-emerald-500/20 text-emerald-300' : 'bg-white/10 text-white/60'}`}>{g.status}</span>
                 </Link>

@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react';
 import type { PublicPlayer } from '@/engine/index.ts';
 
+export type SeatPlayer = Pick<PublicPlayer, 'seat' | 'name' | 'connected' | 'isBot'> & Partial<Pick<PublicPlayer, 'handCount' | 'buysLeft' | 'hasLaidDown'>>;
+
 interface Props {
-  player: PublicPlayer;
+  player: SeatPlayer;
+  /** Lobby mode: no card/buy stats. */
+  hideStats?: boolean;
   active: boolean;
   isDealer: boolean;
   isMe: boolean;
@@ -24,7 +28,7 @@ function initials(name: string) {
 
 const AVATAR_COLORS = ['#2f5fc2', '#7a3fc4', '#c2582f', '#2c9a5b', '#c73b7a', '#3a8fb5'];
 
-export function Seat({ player, active, isDealer, isMe, deadline, totalSeconds, compact, wentOut }: Props) {
+export function Seat({ player, active, isDealer, isMe, deadline, totalSeconds, compact, wentOut, hideStats }: Props) {
   const [now, setNow] = useState(Date.now());
   useEffect(() => {
     if (!active || !deadline) return;
@@ -67,14 +71,14 @@ export function Seat({ player, active, isDealer, isMe, deadline, totalSeconds, c
         {wentOut && <div className="absolute -right-2 -top-1 rounded-full bg-gold px-1 text-[9px] font-extrabold uppercase text-ink shadow">out</div>}
       </div>
       <div className={`max-w-[84px] truncate text-center font-semibold lg:max-w-[120px] lg:text-sm ${compact ? 'text-[11px]' : 'text-xs'} ${isMe ? 'text-gold' : 'text-white'}`}>{player.name}</div>
-      <div className="flex items-center gap-1">
-        <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/90">🂠 {player.handCount}</span>
-        <span className="flex items-center gap-0.5" title={`${player.buysLeft} buys left`}>
-          {Array.from({ length: player.buysLeft }, (_, i) => (
+      {!hideStats && <div className="flex items-center gap-1">
+        <span className="rounded-md bg-black/50 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white/90">🂠 {player.handCount ?? 0}</span>
+        <span className="flex items-center gap-0.5" title={`${player.buysLeft ?? 0} buys left`}>
+          {Array.from({ length: player.buysLeft ?? 0 }, (_, i) => (
             <span key={i} className="chip !h-3 !min-w-3 !px-0 text-chip-red" style={{ boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.85), inset 0 0 0 2px #c73b3b, 0 1px 2px rgba(0,0,0,0.5)', background: '#c73b3b' }} />
           ))}
         </span>
-      </div>
+      </div>}
     </div>
   );
 }
