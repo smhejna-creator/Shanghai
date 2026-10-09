@@ -1,0 +1,158 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400">
+  <defs>
+    <!-- Main gold gradient -->
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFD060;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#F0B429;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#C17D0A;stop-opacity:1" />
+    </linearGradient>
+    <!-- Dark gradient for background -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1A1A2E;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0D0D18;stop-opacity:1" />
+    </linearGradient>
+    <!-- Shield gradient -->
+    <linearGradient id="shieldGrad" x1="20%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" style="stop-color:#242440;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#111128;stop-opacity:1" />
+    </linearGradient>
+    <!-- Gold shine -->
+    <linearGradient id="goldShine" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFE080;stop-opacity:1" />
+      <stop offset="40%" style="stop-color:#F0B429;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A06800;stop-opacity:1" />
+    </linearGradient>
+    <!-- Glow filter -->
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <!-- Outer glow for football -->
+    <filter id="footballGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="1 0.7 0 0 0  0.7 0.5 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="coloredBlur"/>
+      <feComposite in="SourceGraphic" in2="coloredBlur" operator="over"/>
+    </filter>
+    <filter id="dropShadow">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+    <clipPath id="roundedClip">
+      <rect x="20" y="20" width="360" height="360" rx="72" ry="72"/>
+    </clipPath>
+  </defs>
+
+  <!-- Rounded square background -->
+  <rect x="20" y="20" width="360" height="360" rx="72" ry="72" fill="url(#bgGrad)" filter="url(#dropShadow)"/>
+
+  <!-- Subtle grid texture -->
+  <g clip-path="url(#roundedClip)" opacity="0.04">
+    <line x1="20" y1="80" x2="380" y2="80" stroke="#fff" stroke-width="1"/>
+    <line x1="20" y1="140" x2="380" y2="140" stroke="#fff" stroke-width="1"/>
+    <line x1="20" y1="200" x2="380" y2="200" stroke="#fff" stroke-width="1"/>
+    <line x1="20" y1="260" x2="380" y2="260" stroke="#fff" stroke-width="1"/>
+    <line x1="20" y1="320" x2="380" y2="320" stroke="#fff" stroke-width="1"/>
+    <line x1="80" y1="20" x2="80" y2="380" stroke="#fff" stroke-width="1"/>
+    <line x1="140" y1="20" x2="140" y2="380" stroke="#fff" stroke-width="1"/>
+    <line x1="200" y1="20" x2="200" y2="380" stroke="#fff" stroke-width="1"/>
+    <line x1="260" y1="20" x2="260" y2="380" stroke="#fff" stroke-width="1"/>
+    <line x1="320" y1="20" x2="320" y2="380" stroke="#fff" stroke-width="1"/>
+  </g>
+
+  <!-- Radial glow center -->
+  <radialGradient id="centerGlow" cx="50%" cy="48%" r="45%">
+    <stop offset="0%" style="stop-color:#F0B429;stop-opacity:0.12" />
+    <stop offset="100%" style="stop-color:#F0B429;stop-opacity:0" />
+  </radialGradient>
+  <rect x="20" y="20" width="360" height="360" rx="72" ry="72" fill="url(#centerGlow)"/>
+
+  <!-- Shield shape -->
+  <path d="M200 55 L330 105 L330 210 Q330 300 200 355 Q70 300 70 210 L70 105 Z"
+    fill="url(#shieldGrad)"
+    stroke="url(#goldGrad)"
+    stroke-width="2.5"
+    opacity="0.9"/>
+
+  <!-- Shield inner border -->
+  <path d="M200 72 L316 116 L316 212 Q316 292 200 340 Q84 292 84 212 L84 116 Z"
+    fill="none"
+    stroke="url(#goldGrad)"
+    stroke-width="1"
+    opacity="0.3"/>
+
+  <!-- Football -->
+  <g transform="translate(200, 195)" filter="url(#footballGlow)">
+    <!-- Ball body -->
+    <ellipse cx="0" cy="0" rx="54" ry="38" fill="#8B4513" transform="rotate(-32)"/>
+    <ellipse cx="0" cy="0" rx="54" ry="38" fill="none" stroke="#A0522D" stroke-width="1.5" transform="rotate(-32)"/>
+    <!-- Ball highlight -->
+    <ellipse cx="-8" cy="-10" rx="28" ry="14" fill="#A0522D" opacity="0.5" transform="rotate(-32)"/>
+    <!-- Leather seam line -->
+    <line x1="-38" y1="18" x2="38" y2="-18" stroke="#F5DEB3" stroke-width="2" opacity="0.85"/>
+    <!-- Dollar sign laces — rotated to follow seam angle (-32deg) -->
+    <g transform="rotate(-32)" font-family="Impact,Arial Black,sans-serif" font-weight="900" text-anchor="middle" fill="#FFE566" filter="url(#glow)">
+      <!-- Center dollar sign (larger) -->
+      <text x="0" y="5" font-size="18" fill="#FFE566">$</text>
+      <!-- Left dollar sign -->
+      <text x="-20" y="5" font-size="14" fill="#FFD030" opacity="0.9">$</text>
+      <!-- Right dollar sign -->
+      <text x="20" y="5" font-size="14" fill="#FFD030" opacity="0.9">$</text>
+      <!-- Far left (smaller/fading) -->
+      <text x="-36" y="5" font-size="10" fill="#C9A820" opacity="0.6">$</text>
+      <!-- Far right (smaller/fading) -->
+      <text x="36" y="5" font-size="10" fill="#C9A820" opacity="0.6">$</text>
+    </g>
+    <!-- End caps shine -->
+    <ellipse cx="0" cy="0" rx="8" ry="5" fill="#C4873A" transform="rotate(-32) translate(48, 0)"/>
+    <ellipse cx="0" cy="0" rx="8" ry="5" fill="#C4873A" transform="rotate(-32) translate(-48, 0)"/>
+  </g>
+
+  <!-- Gold accent lines flanking shield -->
+  <line x1="52" y1="200" x2="82" y2="200" stroke="url(#goldGrad)" stroke-width="2" opacity="0.6"/>
+  <line x1="318" y1="200" x2="348" y2="200" stroke="url(#goldGrad)" stroke-width="2" opacity="0.6"/>
+
+  <!-- Top text: NFL BOUNTY -->
+  <text x="200" y="136"
+    font-family="'Arial Black', 'Impact', sans-serif"
+    font-size="22"
+    font-weight="900"
+    fill="url(#goldShine)"
+    text-anchor="middle"
+    letter-spacing="6"
+    filter="url(#glow)">BOUNTY</text>
+
+  <!-- Bottom text: HUNTERS -->
+  <text x="200" y="294"
+    font-family="'Arial Black', 'Impact', sans-serif"
+    font-size="22"
+    font-weight="900"
+    fill="url(#goldShine)"
+    text-anchor="middle"
+    letter-spacing="6"
+    filter="url(#glow)">HUNTERS</text>
+
+  <!-- Small decorative diamonds -->
+  <g fill="url(#goldGrad)" opacity="0.7">
+    <polygon points="200,118 205,124 200,130 195,124" />
+    <polygon points="200,276 205,282 200,288 195,282" />
+  </g>
+
+  <!-- Gold star accent top-left and top-right of shield -->
+  <g fill="url(#goldGrad)" opacity="0.5">
+    <polygon points="107,118 110,112 113,118 107,115 113,115" transform="scale(0.8) translate(30,25)"/>
+    <polygon points="283,118 286,112 289,118 283,115 289,115" transform="scale(0.8) translate(-10,25)"/>
+  </g>
+
+  <!-- Outer border ring -->
+  <rect x="20" y="20" width="360" height="360" rx="72" ry="72"
+    fill="none"
+    stroke="url(#goldGrad)"
+    stroke-width="2.5"
+    opacity="0.5"/>
+
+  <!-- Inner subtle ring -->
+  <rect x="30" y="30" width="340" height="340" rx="64" ry="64"
+    fill="none"
+    stroke="url(#goldGrad)"
+    stroke-width="1"
+    opacity="0.15"/>
+</svg>

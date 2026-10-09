@@ -1,124 +1,106 @@
 <!doctype html>
 <html><head><meta charset="utf-8">
 <style>
-  html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#09090f;font-family:'DejaVu Sans',sans-serif}
+  html,body{margin:0;width:1080px;height:1920px;overflow:hidden;background:#07070c}
   #stage{position:relative;width:1080px;height:1920px;overflow:hidden;
-    background:radial-gradient(ellipse at 50% 40%,#1c1a2e 0%,#09090f 70%)}
-  .grid{position:absolute;inset:-200px;background-image:linear-gradient(rgba(255,180,40,.06) 2px,transparent 2px),
-    linear-gradient(90deg,rgba(255,180,40,.06) 2px,transparent 2px);background-size:90px 90px}
-  .t{position:absolute;left:0;width:100%;text-align:center;color:#fff;opacity:0}
-  .gold{color:#ffb428}
-  .big{font-weight:900;letter-spacing:-2px;text-transform:uppercase}
-  #nfl{top:620px;font-size:110px;letter-spacing:30px}
-  #bh{top:740px;font-size:150px;line-height:1.0}
-  #cross{position:absolute;left:290px;top:560px;width:500px;height:500px;opacity:0}
-  #kicker{top:1260px;font-size:34px;letter-spacing:8px;white-space:nowrap;color:#9a97b5}
-  .sec{top:430px;font-size:46px;letter-spacing:14px;color:#ffb428;font-weight:bold}
-  .head{top:520px;font-size:130px;font-weight:900;text-transform:uppercase;letter-spacing:-2px}
-  .line{top:1450px;font-size:58px;color:#e9e7f5}
-  #bid{top:820px;font-size:260px;font-weight:900;color:#ffb428;font-variant-numeric:tabular-nums}
-  #bidlbl{top:1130px;font-size:48px;color:#9a97b5;letter-spacing:6px}
-  #teams{position:absolute;left:130px;top:1200px;width:820px;display:grid;grid-template-columns:repeat(8,1fr);gap:14px}
-  #teams i{display:block;height:70px;border-radius:12px;background:#24223a;opacity:0}
-  #poster{position:absolute;left:240px;top:880px;width:600px;height:640px;border:8px solid #ffb428;border-radius:20px;
-    background:#14131f;opacity:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
-  #poster .w{font-size:120px;font-weight:900;color:#ffb428;letter-spacing:6px}
-  #poster .wk{font-size:50px;color:#e9e7f5;margin-top:20px}
-  #poster .amt{font-size:120px;font-weight:900;color:#fff;margin-top:20px}
-  #stamp{position:absolute;left:330px;top:1330px;font-size:110px;font-weight:900;color:#ff3b4e;border:10px solid #ff3b4e;
-    border-radius:16px;padding:6px 30px;opacity:0;transform-origin:center}
-  #board{position:absolute;left:150px;top:900px;width:780px}
-  .row{display:flex;justify-content:space-between;align-items:center;height:130px;margin-bottom:22px;border-radius:20px;
-    background:#1a1928;padding:0 40px;font-size:58px;color:#e9e7f5;opacity:0}
-  .row b{color:#ffb428}
-  .row.first{background:linear-gradient(90deg,#ffb428,#ff8a00);color:#09090f}
-  .row.first b{color:#09090f}
-  #end1{top:620px;font-size:84px;font-weight:900;line-height:1.15}
-  #end2{top:1000px;font-size:54px;color:#c9c6e0;line-height:1.35}
-  #url{top:1360px;left:50%;width:auto;font-size:56px;font-weight:bold;color:#09090f;background:#ffb428;padding:26px 56px;border-radius:80px;white-space:nowrap}
-  #flash{position:absolute;inset:0;background:#fff;opacity:0}
+    background:radial-gradient(ellipse 900px 700px at 50% 62%,rgba(245,184,46,.16),transparent 70%),
+               radial-gradient(ellipse at 50% 0%,#15142a 0%,#07070c 60%)}
+  #grid{position:absolute;inset:-100px;opacity:.5;
+    background-image:linear-gradient(rgba(245,184,46,.05) 2px,transparent 2px),linear-gradient(90deg,rgba(245,184,46,.05) 2px,transparent 2px);
+    background-size:96px 96px}
+  #phone{position:absolute;left:172px;top:372px;width:736px;height:1551px;border-radius:96px;
+    background:#0d0d14;box-shadow:0 0 0 3px #2a2838,0 0 0 5px rgba(245,184,46,.35),0 60px 140px rgba(0,0,0,.7),0 0 120px rgba(245,184,46,.18);
+    transform-origin:50% 40%}
+  #screen{position:absolute;left:18px;top:18px;width:700px;height:1515px;border-radius:80px;overflow:hidden;background:#09090f}
+  #screen img{position:absolute;left:0;top:0;width:700px;height:1515px;transform-origin:50% 50%}
+  #notch{position:absolute;left:50%;top:34px;width:190px;height:44px;margin-left:-95px;border-radius:30px;background:#000;z-index:3}
+  #capwrap{position:absolute;left:0;top:70px;width:100%;height:290px;display:flex;align-items:center;justify-content:center;z-index:5}
+  .cap{position:absolute;width:100%;text-align:center;font-family:'Inter Display','Inter',sans-serif;font-weight:900;
+    font-size:92px;line-height:1.02;letter-spacing:-2px;color:#fff;text-transform:uppercase;opacity:0;
+    text-shadow:0 8px 30px rgba(0,0,0,.6)}
+  .cap .g{color:#F5B82E}
+  .cap small{display:block;font-size:44px;letter-spacing:0;font-weight:700;color:#cfcbe6;text-transform:none;margin-top:14px}
+  #flash{position:absolute;inset:0;background:#fff;opacity:0;z-index:9;pointer-events:none}
+  #end{position:absolute;inset:0;z-index:6;display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0}
+  #end img{width:470px;height:470px;filter:drop-shadow(0 30px 80px rgba(245,184,46,.35))}
+  #end .t1{font-family:'Inter Display','Inter',sans-serif;font-weight:900;font-size:96px;letter-spacing:-2px;color:#fff;margin-top:40px;text-align:center;line-height:1.02}
+  #end .t1 span{color:#F5B82E}
+  #end .t2{font-family:'Inter',sans-serif;font-size:46px;color:#cfcbe6;margin-top:26px}
+  #end .pill{margin-top:56px;font-family:'Inter',sans-serif;font-weight:800;font-size:54px;color:#0b0b10;
+    background:linear-gradient(180deg,#F8C64A,#E0A21E);padding:28px 60px;border-radius:999px;box-shadow:0 20px 60px rgba(245,184,46,.35)}
+  #tap{position:absolute;width:120px;height:120px;margin:-60px 0 0 -60px;border-radius:50%;border:6px solid #fff;opacity:0;z-index:4}
 </style></head>
 <body><div id="stage">
-  <div class="grid" id="grid"></div>
-  <svg id="cross" viewBox="0 0 100 100" fill="none" stroke="#ffb428" stroke-width="1.6">
-    <circle cx="50" cy="50" r="40"/><circle cx="50" cy="50" r="22" stroke-width="1"/>
-    <line x1="50" y1="0" x2="50" y2="18"/><line x1="50" y1="82" x2="50" y2="100"/>
-    <line x1="0" y1="50" x2="18" y2="50"/><line x1="82" y1="50" x2="100" y2="50"/>
-  </svg>
-  <!-- Scene 1: title -->
-  <div id="nfl" class="t big">NFL</div>
-  <div id="bh" class="t big gold">Bounty<br>Hunters</div>
-  <div id="kicker" class="t">AUCTION · BOUNTIES · BRAGGING RIGHTS</div>
-  <!-- Scene 2: auction -->
-  <div id="s2a" class="t sec">01 · THE AUCTION</div>
-  <div id="s2b" class="t head">Bid on<br>all 32 teams</div>
-  <div id="bid" class="t">$0</div>
-  <div id="bidlbl" class="t">CURRENT BID</div>
-  <div id="teams"></div>
-  <!-- Scene 3: bounties -->
-  <div id="s3a" class="t sec">02 · THE BOUNTIES</div>
-  <div id="s3b" class="t head">Set weekly<br>bounties</div>
-  <div id="poster"><div class="w">WANTED</div><div class="wk">WEEK 6 BOUNTY</div><div class="amt">$50</div></div>
-  <div id="stamp">COLLECTED</div>
-  <!-- Scene 4: bragging rights -->
-  <div id="s4a" class="t sec">03 · BRAGGING RIGHTS</div>
-  <div id="s4b" class="t head">Win and<br>collect</div>
-  <div id="board">
-    <div class="row first"><span>1. You</span><b>$420</b></div>
-    <div class="row"><span>2. Mike</span><b>$310</b></div>
-    <div class="row"><span>3. Dana</span><b>$275</b></div>
-    <div class="row"><span>4. Chris</span><b>$190</b></div>
+  <div id="grid"></div>
+  <div id="phone"><div id="screen"><img id="img"></div></div>
+  <div id="capwrap">
+    <div class="cap" id="c1">Every season…</div>
+    <div class="cap" id="c2">Who <span class="g">really</span><br>knows football?</div>
+    <div class="cap" id="c3"><span class="g">NFL Bounty</span><br>Hunters</div>
+    <div class="cap" id="c4">Bid on all<br><span class="g">32 teams</span></div>
+    <div class="cap" id="c5">Live <span class="g">bidding war</span><small>10 friends. One Dallas Cowboys.</small></div>
+    <div class="cap" id="c6"><span class="g">$425.</span> Sold.<small>Going once… going twice…</small></div>
+    <div class="cap" id="c7">Set weekly<br><span class="g">bounties</span></div>
+    <div class="cap" id="c8">Win… and<br><span class="g">collect</span></div>
+    <div class="cap" id="c9">Bragging<br><span class="g">rights</span></div>
   </div>
-  <!-- Scene 5: end card -->
-  <div id="end1" class="t">Built for friends<br>who take the game<br><span class="gold">seriously.</span></div>
-  <div id="end2" class="t">Start your league</div>
-  <div id="url" class="t">bountyleague.netlify.app</div>
+  <div id="end">
+    <img src="../logo.svg">
+    <div class="t1">Your league<br>is <span>waiting.</span></div>
+    <div class="t2">Auction · Bounties · Bragging Rights</div>
+    <div class="pill">bountyleague.netlify.app</div>
+  </div>
   <div id="flash"></div>
 </div>
+<script src="clips.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-const teams=$('teams'); for(let i=0;i<32;i++) teams.appendChild(document.createElement('i'));
-const tiles=[...teams.children]; const rows=[...document.querySelectorAll('.row')];
-const clamp=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>(t-a)/(b-a);
+const clamp=x=>Math.max(0,Math.min(1,x)), seg=(t,a,b)=>clamp((t-a)/(b-a));
 const ease=x=>1-Math.pow(1-clamp(x),3);
-const back=x=>{x=clamp(x);const c1=2.2,c3=c1+1;return 1+c3*Math.pow(x-1,3)+c1*Math.pow(x-1,2);};
-// Show an element between [a,b] with fade/slide in and out.
-function show(el,t,a,b,{dy=60,scale=0,x=''}={}){
-  const i=ease(seg(t,a,a+.45)), o=1-ease(seg(t,b-.35,b));
-  el.style.opacity=Math.min(i,o);
-  const s=scale?(1+scale*(1-back(seg(t,a,a+.5)))):1;
-  el.style.transform=`${x} translateY(${(1-i)*dy}px) scale(${s})`;
+const io=x=>{x=clamp(x);return x<.5?4*x*x*x:1-Math.pow(-2*x+2,3)/2};
+// Timeline: [start, end, clip, r0, r1, zoom0, zoom1, originX, originY]
+const SHOTS=[
+  [0.0, 7.6, 'landing', 0.0, 7.6, 1.00,1.06, .5,.35],
+  [7.6, 10.6,'auction', 3.6, 9.6, 1.00,1.00, .5,.5],
+  [10.6,14.0,'auction', 9.6, 48.7,1.06,1.16, .5,.42],
+  [14.0,17.0,'auction', 51.5,60.5,1.16,1.10, .5,.42],
+  [17.0,18.7,'games',   0.6, 3.6, 1.00,1.08, .5,.45],
+  [18.7,20.3,'myteams', 0.2, 1.8, 1.00,1.18, .3,.24],
+  [20.3,22.9,'standings',0.3,3.0, 1.00,1.06, .5,.35],
+  [22.9,26.0,'standings',3.0,3.0, 1.06,1.06, .5,.35],
+];
+const CAPS=[['c1',0.45,2.85],['c2',3.2,5.2],['c3',5.4,7.6],['c4',7.65,10.6],['c5',10.6,14.0],['c6',14.6,17.0],['c7',17.0,18.7],['c8',18.7,20.3],['c9',20.3,22.8]];
+const CUTS=[7.6,17.0,18.7,20.3];
+function frameFor(clip,r){
+  const c=CLIPS[clip], ts=c.times; let lo=0,hi=ts.length-1;
+  while(lo<hi){const m=(lo+hi+1)>>1; if(ts[m]<=r) lo=m; else hi=m-1;}
+  return `${c.dir}/${String(lo).padStart(5,'0')}.jpg`;
 }
-window.render=function(t){
-  $('grid').style.transform=`translateY(${(t*40)%90}px)`;
-  // Scene 1 (0–2.8)
-  const c=$('cross'); c.style.opacity=Math.min(ease(seg(t,0,.5)),1-ease(seg(t,2.4,2.8)))*.9;
-  c.style.transform=`scale(${1.8-0.8*ease(seg(t,0,.9))}) rotate(${(1-ease(seg(t,0,1)))*-90}deg)`;
-  show($('nfl'),t,.5,2.8,{scale:.6}); show($('bh'),t,.7,2.8,{scale:.8});
-  show($('kicker'),t,1.3,2.8);
-  // Scene 2 (2.8–5.6)
-  show($('s2a'),t,2.9,5.6); show($('s2b'),t,3.0,5.6);
-  show($('bid'),t,3.3,5.6,{scale:.3}); show($('bidlbl'),t,3.4,5.6);
-  const amt=Math.round(5*Math.floor(ease(seg(t,3.3,5.0))*47)); $('bid').textContent='$'+amt;
-  tiles.forEach((el,i)=>{const k=ease(seg(t,3.4+i*.04,3.7+i*.04));const o=1-ease(seg(t,5.25,5.6));
-    el.style.opacity=Math.min(k,o); el.style.transform=`scale(${.4+.6*back(seg(t,3.4+i*.04,3.8+i*.04))})`;
-    el.style.background=(i===13&&t>4.6)?'#ffb428':'#24223a';});
-  // Scene 3 (5.6–8.4)
-  show($('s3a'),t,5.7,8.4); show($('s3b'),t,5.8,8.4); show($('poster'),t,6.0,8.4,{scale:.25});
-  const st=$('stamp'); const sk=seg(t,7.0,7.25);
-  st.style.opacity=t<7?0:Math.min(1,1-ease(seg(t,8.05,8.4)));
-  st.style.transform=`rotate(-14deg) scale(${t<7?3:3-2*ease(sk)})`;
-  // Scene 4 (8.4–11.2)
-  show($('s4a'),t,8.5,11.2); show($('s4b'),t,8.6,11.2);
-  rows.forEach((r,i)=>{const a=9.0+(3-i)*.18; const k=ease(seg(t,a,a+.4)); const o=1-ease(seg(t,10.85,11.2));
-    r.style.opacity=Math.min(k,o); r.style.transform=`translateX(${(1-k)*(i%2?-200:200)}px)`;});
-  // Scene 5 (11.2–14)
-  show($('end1'),t,11.3,14.2); show($('end2'),t,11.9,14.2);
-  show($('url'),t,12.2,14.2,{x:'translateX(-50%)',scale:.3});
-  // Quick white flashes on scene cuts
-  const cuts=[2.8,5.6,8.4,11.2]; let f=0; cuts.forEach(cut=>{const d=t-cut; if(d>=0&&d<.25) f=Math.max(f,.35*(1-d/.25));});
-  $('flash').style.opacity=f;
-  $('stage').style.opacity=1-ease(seg(t,13.6,14));
+window.render=async function(t){
+  const s=SHOTS.find(x=>t>=x[0]&&t<x[1])||SHOTS[SHOTS.length-1];
+  const k=seg(t,s[0],s[1]);
+  const r=s[3]+(s[4]-s[3])*k;
+  const img=$('img'); const src=frameFor(s[2],r);
+  if(img.getAttribute('src')!==src){ img.src=src; try{await img.decode();}catch(e){} }
+  const z=s[5]+(s[6]-s[5])*io(k);
+  img.style.transformOrigin=`${s[7]*100}% ${s[8]*100}%`;
+  img.style.transform=`scale(${z})`;
+  // Phone entrance + exit
+  const enter=ease(seg(t,0,0.8)), exit=io(seg(t,22.9,23.6));
+  $("phone").style.transform=`translateY(${(1-enter)*500 + exit*1800}px) scale(${1-exit*.15})`;
+  $('phone').style.opacity=1-ease(seg(t,23.1,23.6));
+  // Cut punch
+  let punch=0; CUTS.forEach(c=>{const d=t-c; if(d>=0&&d<.3) punch=Math.max(punch,1-d/.3);});
+  $('flash').style.opacity=punch*.18;
+  $('screen').style.transform=`scale(${1+punch*.02})`;
+  // Captions
+  CAPS.forEach(([id,a,b])=>{const el=$(id); const i=ease(seg(t,a,a+.3)), o=1-ease(seg(t,b-.2,b));
+    el.style.opacity=Math.min(i,o); el.style.transform=`translateY(${(1-i)*30}px) scale(${.92+.08*i})`;});
+  // End card
+  const e=ease(seg(t,23.0,23.8));
+  $('end').style.opacity=e; $('end').style.transform=`scale(${.9+.1*e})`;
+  $('end').querySelector('.pill').style.transform=`scale(${1+.03*Math.sin(t*5)*seg(t,24,24.5)})`;
+  $('stage').style.opacity=1-ease(seg(t,25.5,26));
+  $('grid').style.transform=`translateY(${(t*30)%96}px)`;
 };
-render(0);
 </script></body></html>
